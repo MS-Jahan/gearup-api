@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gearup-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gearup
+      POSTGRES_PASSWORD: gearup123
+      POSTGRES_DB: gearup
+    ports:
+      - "5433:5432"
+    volumes:
+      - gearup_data:/var/lib/postgresql/data
+
+volumes:
+  gearup_data:
