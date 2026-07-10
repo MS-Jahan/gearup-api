@@ -47,7 +47,8 @@ save_state RENTAL_ID "$RENTAL_ID"
 
 pause_step
 use_token "CUSTOMER" "$CUSTOMER_TOKEN"
-api_request GET "/api/rentals" "" "$CUSTOMER_TOKEN" "CUSTOMER"
+echo -e "${DIM}Only this customer's orders (filtered by JWT). ?limit=5 keeps demo output short.${RESET}"
+api_request GET "/api/rentals?limit=5" "" "$CUSTOMER_TOKEN" "CUSTOMER"
 
 pause_step
 use_token "CUSTOMER" "$CUSTOMER_TOKEN"

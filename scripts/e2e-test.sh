@@ -104,6 +104,12 @@ api POST "/api/auth/login" '{"email":"customer@gearup.com","password":"Customer@
 assert_http "customer login" "200" "$LAST_HTTP"
 CUSTOMER_TOKEN="$(json_field "$LAST_JSON" "['data']['token']")"
 [[ -n "$CUSTOMER_TOKEN" ]] && pass "customer token received" || fail "customer token received"
+CUSTOMER_UID="$(echo "$CUSTOMER_TOKEN" | python3 -c "
+import base64, json, sys
+p = sys.stdin.read().strip().split('.')[1]
+p += '=' * (-len(p) % 4)
+print(json.loads(base64.urlsafe_b64decode(p))['userId'])
+")"
 
 api POST "/api/auth/login" '{"email":"bad@test.com","password":"wrong"}'
 assert_http "bad login 401" "401" "$LAST_HTTP"
@@ -153,6 +159,17 @@ print(f'{start.isoformat()}T00:00:00.000Z|{end.isoformat()}T00:00:00.000Z')
   if [[ -n "${RENTAL_ID:-}" ]]; then
     api GET "/api/rentals/${RENTAL_ID}" "" "$CUSTOMER_TOKEN"
     assert_http "GET rental detail" "200" "$LAST_HTTP"
+
+    api GET "/api/rentals?limit=10" "" "$CUSTOMER_TOKEN"
+    assert_http "GET rentals list" "200" "$LAST_HTTP"
+    echo "$LAST_JSON" | python3 -c "
+import json, sys
+uid = '''$CUSTOMER_UID'''
+orders = json.load(sys.stdin).get('data', [])
+bad = [o['id'] for o in orders if o.get('customerId') != uid]
+if bad:
+    sys.exit(1)
+" && pass "rentals scoped to authenticated customer" || fail "rentals scoped to authenticated customer"
 
     api POST "/api/payments/create" "{\"rentalOrderId\":\"${RENTAL_ID}\"}" "$CUSTOMER_TOKEN"
     if [[ "$LAST_HTTP" == "200" || "$LAST_HTTP" == "201" ]]; then

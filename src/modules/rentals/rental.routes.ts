@@ -111,10 +111,25 @@ router.post(
  *   get:
  *     tags: [Rentals]
  *     summary: List current customer's rental orders
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Max number of recent orders to return (newest first)
  */
 router.get(
   "/",
   asyncHandler(async (req: AuthRequest, res: Response) => {
+    const rawLimit = req.query.limit;
+    const limit =
+      rawLimit !== undefined ? parseInt(String(rawLimit), 10) : undefined;
+    if (limit !== undefined && (Number.isNaN(limit) || limit < 1 || limit > 100)) {
+      throw new AppError("limit must be between 1 and 100", 400);
+    }
+
     const orders = await prisma.rentalOrder.findMany({
       where: { customerId: req.user!.userId },
       include: {
@@ -123,6 +138,7 @@ router.get(
         provider: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: "desc" },
+      ...(limit !== undefined ? { take: limit } : {}),
     });
     sendSuccess(res, orders);
   })
