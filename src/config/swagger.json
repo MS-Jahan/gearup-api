@@ -124,6 +124,14 @@
         "summary": "Update current user profile"
       }
     },
+    "/api/payments/pay": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Embedded Stripe Checkout payment page"
+      }
+    },
     "/api/payments/success": {
       "get": {
         "tags": [
@@ -146,7 +154,7 @@
           "Payments"
         ],
         "summary": "Create Stripe Checkout session for rental order",
-        "description": "Returns a hosted Stripe Checkout `url` — open it in a browser to pay.\nAfter payment, Stripe calls `/api/payments/webhook` and the order is marked PAID.\n"
+        "description": "Returns a payment page `url` on this API — open it in a browser to pay via Stripe Checkout.\nAfter payment, Stripe calls `/api/payments/webhook` and the order is marked PAID.\n"
       }
     },
     "/api/payments/confirm": {

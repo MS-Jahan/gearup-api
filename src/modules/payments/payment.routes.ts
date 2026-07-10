@@ -37,6 +37,117 @@ const paymentResultPage = (title: string, message: string) => `<!DOCTYPE html>
 </body>
 </html>`;
 
+const buildPayPageUrl = (sessionId: string) => {
+  const baseUrl = config.appUrl.replace(/\/$/, "");
+  return `${baseUrl}/api/payments/pay?session_id=${sessionId}`;
+};
+
+const embeddedCheckoutPage = (
+  publishableKey: string,
+  clientSecret: string,
+  amount: string
+) => `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pay — GearUp</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #f8fafc; margin: 0; padding: 2rem 1rem; }
+    .wrap { max-width: 520px; margin: 0 auto; }
+    h1 { font-size: 1.35rem; color: #0f172a; margin: 0 0 0.25rem; }
+    .amount { color: #475569; margin-bottom: 1.25rem; }
+    #checkout { min-height: 420px; }
+    .err { background: #fef2f2; color: #991b1b; padding: 1rem; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>GearUp rental payment</h1>
+    <p class="amount">Amount: $${amount} USD</p>
+    <div id="checkout"></div>
+    <div id="error" class="err" style="display:none"></div>
+  </div>
+  <script>
+    (async () => {
+      try {
+        const stripe = Stripe(${JSON.stringify(publishableKey)});
+        const checkout = await stripe.initEmbeddedCheckout({
+          clientSecret: ${JSON.stringify(clientSecret)},
+        });
+        checkout.mount("#checkout");
+      } catch (err) {
+        const el = document.getElementById("error");
+        el.style.display = "block";
+        el.textContent = err.message || "Failed to load checkout";
+      }
+    })();
+  </script>
+</body>
+</html>`;
+
+/**
+ * @swagger
+ * /api/payments/pay:
+ *   get:
+ *     tags: [Payments]
+ *     summary: Embedded Stripe Checkout payment page
+ */
+router.get(
+  "/pay",
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const sessionId = req.query.session_id as string | undefined;
+    if (!sessionId) {
+      throw new AppError("session_id query parameter is required", 400);
+    }
+    if (!config.stripe.publishableKey) {
+      res
+        .type("html")
+        .send(
+          paymentResultPage(
+            "Stripe not configured",
+            "STRIPE_PUBLISHABLE_KEY is missing on the server. Add it in Vercel env vars (pk_test_...)."
+          )
+        );
+      return;
+    }
+
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.status !== "open") {
+      res
+        .type("html")
+        .send(
+          paymentResultPage(
+            "Checkout unavailable",
+            `This payment session is ${session.status}. Create a new payment from the API.`
+          )
+        );
+      return;
+    }
+
+    if (!session.client_secret) {
+      throw new AppError("Checkout session has no client secret", 500);
+    }
+
+    const amount = session.amount_total
+      ? (session.amount_total / 100).toFixed(2)
+      : "0.00";
+
+    res
+      .type("html")
+      .send(
+        embeddedCheckoutPage(
+          config.stripe.publishableKey,
+          session.client_secret,
+          amount
+        )
+      );
+  })
+);
+
 /**
  * @swagger
  * /api/payments/success:
@@ -100,7 +211,7 @@ router.use(authenticate, authorize("CUSTOMER"));
  *     tags: [Payments]
  *     summary: Create Stripe Checkout session for rental order
  *     description: |
- *       Returns a hosted Stripe Checkout `url` — open it in a browser to pay.
+ *       Returns a payment page `url` on this API — open it in a browser to pay via Stripe Checkout.
  *       After payment, Stripe calls `/api/payments/webhook` and the order is marked PAID.
  */
 router.post(
@@ -135,6 +246,18 @@ router.post(
     const gearNames = order.items.map((i) => i.gearItem.name).join(", ");
     const baseUrl = config.appUrl.replace(/\/$/, "");
 
+    if (!config.stripe.publishableKey) {
+      throw new AppError(
+        "STRIPE_PUBLISHABLE_KEY is not configured on the server",
+        500
+      );
+    }
+
+    const customer = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      select: { email: true },
+    });
+
     if (
       existing?.stripePaymentIntentId &&
       existing.stripePaymentIntentId.startsWith("cs_")
@@ -142,12 +265,12 @@ router.post(
       const oldSession = await stripe.checkout.sessions.retrieve(
         existing.stripePaymentIntentId
       );
-      if (oldSession.status === "open" && oldSession.url) {
+      if (oldSession.status === "open" && oldSession.client_secret) {
         sendSuccess(
           res,
           {
             payment: existing,
-            url: oldSession.url,
+            url: buildPayPageUrl(oldSession.id),
             sessionId: oldSession.id,
           },
           "Checkout session ready"
@@ -158,7 +281,9 @@ router.post(
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      payment_method_types: ["card"],
+      ui_mode: "embedded",
+      redirect_on_completion: "if_required",
+      customer_email: customer?.email,
       line_items: [
         {
           price_data: {
@@ -176,12 +301,11 @@ router.post(
         rentalOrderId: order.id,
         customerId: req.user!.userId,
       },
-      success_url: `${baseUrl}/api/payments/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/api/payments/cancel?rental_order_id=${order.id}`,
+      return_url: `${baseUrl}/api/payments/success?session_id={CHECKOUT_SESSION_ID}`,
     });
 
-    if (!session.url) {
-      throw new AppError("Failed to create Stripe Checkout URL", 500);
+    if (!session.client_secret) {
+      throw new AppError("Failed to create Stripe Checkout session", 500);
     }
 
     const payment = await prisma.payment.upsert({
@@ -205,7 +329,7 @@ router.post(
       res,
       {
         payment,
-        url: session.url,
+        url: buildPayPageUrl(session.id),
         sessionId: session.id,
       },
       "Checkout session created",
