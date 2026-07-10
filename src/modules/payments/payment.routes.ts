@@ -56,6 +56,7 @@ router.post(
       amount: amountCents,
       currency: "usd",
       payment_method_types: ["card"],
+      automatic_payment_methods: { enabled: false },
       metadata: {
         rentalOrderId: order.id,
         customerId: req.user!.userId,
