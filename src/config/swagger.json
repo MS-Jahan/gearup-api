@@ -39,7 +39,28 @@
         "tags": [
           "Reviews"
         ],
-        "summary": "Get reviews for a gear item"
+        "summary": "Get reviews for a gear item (paginated)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          }
+        ]
       }
     },
     "/api/rentals": {
@@ -120,7 +141,28 @@
         "tags": [
           "Provider"
         ],
-        "summary": "View incoming rental orders"
+        "summary": "View incoming rental orders (paginated)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          }
+        ]
       }
     },
     "/api/provider/orders/{id}": {
@@ -191,7 +233,28 @@
         "tags": [
           "Payments"
         ],
-        "summary": "Get customer payment history"
+        "summary": "Get customer payment history (paginated)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          }
+        ]
       }
     },
     "/api/payments/{id}": {
@@ -223,7 +286,28 @@
         "tags": [
           "Categories"
         ],
-        "summary": "List all gear categories"
+        "summary": "List all gear categories (paginated)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -275,7 +359,40 @@
         "tags": [
           "Admin"
         ],
-        "summary": "List all users"
+        "summary": "List all users (paginated)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          },
+          {
+            "in": "query",
+            "name": "role",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CUSTOMER",
+                "PROVIDER",
+                "ADMIN"
+              ]
+            }
+          }
+        ]
       }
     },
     "/api/admin/users/{id}": {
@@ -291,7 +408,28 @@
         "tags": [
           "Admin"
         ],
-        "summary": "List all gear listings"
+        "summary": "List all gear listings (paginated)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          }
+        ]
       }
     },
     "/api/admin/rentals": {
@@ -299,7 +437,28 @@
         "tags": [
           "Admin"
         ],
-        "summary": "List all rental orders"
+        "summary": "List all rental orders (paginated)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          }
+        ]
       }
     }
   },

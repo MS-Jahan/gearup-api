@@ -2,8 +2,8 @@ import { Router, Response } from "express";
 import { prisma } from "../../config/database";
 import { AppError, sendSuccess } from "../../utils/apiResponse";
 import { authenticate, authorize, asyncHandler } from "../../middleware/auth";
-import { gearSchema, updateOrderStatusSchema } from "../../middleware/validate";
-import { AuthRequest, getParam } from "../../utils/helpers";
+import { gearSchema, paginationQuerySchema, updateOrderStatusSchema } from "../../middleware/validate";
+import { AuthRequest, getParam, paginatedResponse } from "../../utils/helpers";
 
 const router = Router();
 
@@ -120,21 +120,45 @@ router.delete(
  * /api/provider/orders:
  *   get:
  *     tags: [Provider]
- *     summary: View incoming rental orders
+ *     summary: View incoming rental orders (paginated)
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
  */
 router.get(
   "/orders",
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orders = await prisma.rentalOrder.findMany({
-      where: { providerId: req.user!.userId },
-      include: {
-        customer: { select: { id: true, name: true, email: true } },
-        items: { include: { gearItem: true } },
-        payment: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
-    sendSuccess(res, orders);
+    const query = paginationQuerySchema.parse(req.query);
+    const where = { providerId: req.user!.userId };
+    const skip = (query.page - 1) * query.limit;
+
+    const [items, total] = await Promise.all([
+      prisma.rentalOrder.findMany({
+        where,
+        include: {
+          customer: { select: { id: true, name: true, email: true } },
+          items: { include: { gearItem: true } },
+          payment: true,
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: query.limit,
+      }),
+      prisma.rentalOrder.count({ where }),
+    ]);
+
+    sendSuccess(res, paginatedResponse(items, total, query.page, query.limit));
   })
 );
 

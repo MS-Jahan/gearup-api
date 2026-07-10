@@ -28,7 +28,7 @@ fi
 
 pause_step
 step_title "GET /api/admin/users (customer token — expect 403)"
-api_request GET "/api/admin/users" "" "$CUSTOMER_TOKEN" "CUSTOMER"
+api_request GET "/api/admin/users?page=1&limit=10" "" "$CUSTOMER_TOKEN" "CUSTOMER"
 
 pause_step
 step_title "GET /api/gear/nonexistent-id-000 (expect 404)"

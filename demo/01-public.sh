@@ -15,9 +15,9 @@ api_request GET "/"
 save_state ROOT_OK "$(json_field "$LAST_RESPONSE" "['success']")"
 
 pause_step
-api_request GET "/api/categories"
-CATEGORY_ID="$(json_field "$LAST_RESPONSE" "['data'][0]['id']")"
-CATEGORY_SLUG="$(json_field "$LAST_RESPONSE" "['data'][0]['slug']")"
+api_request GET "/api/categories?page=1&limit=10"
+CATEGORY_ID="$(json_field "$LAST_RESPONSE" "['data']['items'][0]['id']")"
+CATEGORY_SLUG="$(json_field "$LAST_RESPONSE" "['data']['items'][0]['slug']")"
 save_state CATEGORY_ID "$CATEGORY_ID"
 save_state CATEGORY_SLUG "$CATEGORY_SLUG"
 

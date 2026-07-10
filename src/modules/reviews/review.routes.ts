@@ -2,8 +2,8 @@ import { Router, Response } from "express";
 import { prisma } from "../../config/database";
 import { AppError, sendSuccess } from "../../utils/apiResponse";
 import { authenticate, authorize, asyncHandler } from "../../middleware/auth";
-import { reviewSchema } from "../../middleware/validate";
-import { AuthRequest, getParam } from "../../utils/helpers";
+import { reviewSchema, paginationQuerySchema } from "../../middleware/validate";
+import { AuthRequest, getParam, buildPaginationMeta } from "../../utils/helpers";
 
 const router = Router();
 
@@ -66,25 +66,53 @@ router.post(
  * /api/reviews/gear/{gearId}:
  *   get:
  *     tags: [Reviews]
- *     summary: Get reviews for a gear item
+ *     summary: Get reviews for a gear item (paginated)
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
  */
 router.get(
   "/gear/:gearId",
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const reviews = await prisma.review.findMany({
-      where: { gearItemId: getParam(req.params.gearId) },
-      include: {
-        customer: { select: { id: true, name: true } },
-      },
-      orderBy: { createdAt: "desc" },
+    const query = paginationQuerySchema.parse(req.query);
+    const gearItemId = getParam(req.params.gearId);
+    const where = { gearItemId };
+    const skip = (query.page - 1) * query.limit;
+
+    const [items, total, aggregate] = await Promise.all([
+      prisma.review.findMany({
+        where,
+        include: {
+          customer: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: query.limit,
+      }),
+      prisma.review.count({ where }),
+      prisma.review.aggregate({
+        where,
+        _avg: { rating: true },
+      }),
+    ]);
+
+    sendSuccess(res, {
+      items,
+      averageRating:
+        Math.round((aggregate._avg.rating ?? 0) * 10) / 10,
+      meta: buildPaginationMeta(total, query.page, query.limit),
     });
-
-    const avg =
-      reviews.length > 0
-        ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
-        : 0;
-
-    sendSuccess(res, { reviews, averageRating: Math.round(avg * 10) / 10 });
   })
 );
 

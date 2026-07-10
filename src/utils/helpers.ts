@@ -52,3 +52,24 @@ export const slugify = (text: string): string => {
 export const getParam = (value: string | string[]): string => {
   return Array.isArray(value) ? value[0] : value;
 };
+
+export const buildPaginationMeta = (
+  total: number,
+  page: number,
+  limit: number
+) => ({
+  total,
+  page,
+  limit,
+  totalPages: Math.ceil(total / limit) || 1,
+});
+
+export const paginatedResponse = <T>(
+  items: T[],
+  total: number,
+  page: number,
+  limit: number
+) => ({
+  items,
+  meta: buildPaginationMeta(total, page, limit),
+});

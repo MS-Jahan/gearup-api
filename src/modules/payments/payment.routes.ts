@@ -3,8 +3,8 @@ import { prisma } from "../../config/database";
 import { config } from "../../config";
 import { AppError, sendSuccess } from "../../utils/apiResponse";
 import { authenticate, authorize, asyncHandler } from "../../middleware/auth";
-import { confirmPaymentSchema, createPaymentSchema } from "../../middleware/validate";
-import { AuthRequest, getParam } from "../../utils/helpers";
+import { confirmPaymentSchema, createPaymentSchema, paginationQuerySchema } from "../../middleware/validate";
+import { AuthRequest, getParam, paginatedResponse } from "../../utils/helpers";
 import {
   completePaymentByCheckoutSession,
   completePaymentByIntentId,
@@ -387,21 +387,45 @@ router.post(
  * /api/payments:
  *   get:
  *     tags: [Payments]
- *     summary: Get customer payment history
+ *     summary: Get customer payment history (paginated)
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
  */
 router.get(
   "/",
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const payments = await prisma.payment.findMany({
-      where: { customerId: req.user!.userId },
-      include: {
-        rentalOrder: {
-          include: { items: { include: { gearItem: true } } },
+    const query = paginationQuerySchema.parse(req.query);
+    const where = { customerId: req.user!.userId };
+    const skip = (query.page - 1) * query.limit;
+
+    const [items, total] = await Promise.all([
+      prisma.payment.findMany({
+        where,
+        include: {
+          rentalOrder: {
+            include: { items: { include: { gearItem: true } } },
+          },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-    sendSuccess(res, payments);
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: query.limit,
+      }),
+      prisma.payment.count({ where }),
+    ]);
+
+    sendSuccess(res, paginatedResponse(items, total, query.page, query.limit));
   })
 );
 

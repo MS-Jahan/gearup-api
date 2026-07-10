@@ -24,7 +24,7 @@ api_request PUT "/api/provider/gear/${NEW_GEAR_ID}" \
 
 pause_step
 use_token "PROVIDER" "$PROVIDER_TOKEN"
-api_request GET "/api/provider/orders" "" "$PROVIDER_TOKEN" "PROVIDER"
+api_request GET "/api/provider/orders?page=1&limit=10" "" "$PROVIDER_TOKEN" "PROVIDER"
 
 if [[ -z "${RENTAL_ID:-}" ]]; then
   echo -e "${RED}RENTAL_ID not set — run 02-customer.sh first${RESET}"

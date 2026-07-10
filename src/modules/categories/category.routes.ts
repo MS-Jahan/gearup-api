@@ -1,9 +1,9 @@
 import { Router, Response } from "express";
 import { prisma } from "../../config/database";
 import { AppError, sendSuccess } from "../../utils/apiResponse";
-import { slugify, AuthRequest, getParam } from "../../utils/helpers";
+import { slugify, AuthRequest, getParam, paginatedResponse } from "../../utils/helpers";
 import { authenticate, authorize, asyncHandler } from "../../middleware/auth";
-import { categorySchema } from "../../middleware/validate";
+import { categorySchema, paginationQuerySchema } from "../../middleware/validate";
 
 const router = Router();
 
@@ -12,16 +12,39 @@ const router = Router();
  * /api/categories:
  *   get:
  *     tags: [Categories]
- *     summary: List all gear categories
+ *     summary: List all gear categories (paginated)
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
  */
 router.get(
   "/",
-  asyncHandler(async (_req: AuthRequest, res: Response) => {
-    const categories = await prisma.category.findMany({
-      orderBy: { name: "asc" },
-      include: { _count: { select: { gearItems: true } } },
-    });
-    sendSuccess(res, categories);
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const query = paginationQuerySchema.parse(req.query);
+    const skip = (query.page - 1) * query.limit;
+
+    const [items, total] = await Promise.all([
+      prisma.category.findMany({
+        orderBy: { name: "asc" },
+        include: { _count: { select: { gearItems: true } } },
+        skip,
+        take: query.limit,
+      }),
+      prisma.category.count(),
+    ]);
+
+    sendSuccess(res, paginatedResponse(items, total, query.page, query.limit));
   })
 );
 

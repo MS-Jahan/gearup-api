@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import { prisma } from "../../config/database";
 import { AppError, sendSuccess } from "../../utils/apiResponse";
-import { calculateRentalDays, AuthRequest, getParam } from "../../utils/helpers";
+import { calculateRentalDays, AuthRequest, getParam, paginatedResponse } from "../../utils/helpers";
 import { authenticate, authorize, asyncHandler } from "../../middleware/auth";
 import { createRentalSchema, rentalListQuerySchema } from "../../middleware/validate";
 
@@ -148,15 +148,10 @@ router.get(
       prisma.rentalOrder.count({ where }),
     ]);
 
-    sendSuccess(res, {
-      items,
-      meta: {
-        total,
-        page: query.page,
-        limit: query.limit,
-        totalPages: Math.ceil(total / query.limit) || 1,
-      },
-    });
+    sendSuccess(
+      res,
+      paginatedResponse(items, total, query.page, query.limit)
+    );
   })
 );
 

@@ -22,6 +22,23 @@ assert_http() {
   fi
 }
 
+assert_paginated() {
+  local label="$1"
+  local json="$2"
+  if echo "$json" | python3 -c "
+import json, sys
+payload = json.load(sys.stdin).get('data', {})
+items = payload.get('items')
+meta = payload.get('meta', {})
+ok = isinstance(items, list) and all(k in meta for k in ('total', 'page', 'limit', 'totalPages'))
+sys.exit(0 if ok else 1)
+" 2>/dev/null; then
+    pass "$label"
+  else
+    fail "$label"
+  fi
+}
+
 assert_json_true() {
   local label="$1"
   local json="$2"
@@ -78,9 +95,10 @@ assert_json_true "health success" "$LAST_JSON" "['success']"
 api GET "/"
 assert_http "GET /" "200" "$LAST_HTTP"
 
-api GET "/api/categories"
+api GET "/api/categories?page=1&limit=10"
 assert_http "GET /api/categories" "200" "$LAST_HTTP"
-assert_json_true "categories list" "$LAST_JSON" "['data'] and len(d['data']) > 0"
+assert_paginated "categories paginated" "$LAST_JSON"
+assert_json_true "categories list" "$LAST_JSON" "['data']['items'] and len(d['data']['items']) > 0"
 
 api GET "/api/gear?limit=5"
 assert_http "GET /api/gear" "200" "$LAST_HTTP"
@@ -173,6 +191,10 @@ if bad or 'total' not in meta or 'page' not in meta:
     sys.exit(1)
 " && pass "rentals paginated and scoped to customer" || fail "rentals paginated and scoped to customer"
 
+    api GET "/api/payments?page=1&limit=10" "" "$CUSTOMER_TOKEN"
+    assert_http "GET payment history" "200" "$LAST_HTTP"
+    assert_paginated "payments paginated" "$LAST_JSON"
+
     api POST "/api/payments/create" "{\"rentalOrderId\":\"${RENTAL_ID}\"}" "$CUSTOMER_TOKEN"
     if [[ "$LAST_HTTP" == "200" || "$LAST_HTTP" == "201" ]]; then
       pass "create payment"
@@ -185,8 +207,9 @@ if bad or 'total' not in meta or 'page' not in meta:
 fi
 
 section "Provider"
-api GET "/api/provider/orders" "" "$PROVIDER_TOKEN"
+api GET "/api/provider/orders?page=1&limit=10" "" "$PROVIDER_TOKEN"
 assert_http "GET provider orders" "200" "$LAST_HTTP"
+assert_paginated "provider orders paginated" "$LAST_JSON"
 
 if [[ -n "${RENTAL_ID:-}" ]]; then
   api PATCH "/api/provider/orders/${RENTAL_ID}" '{"status":"CONFIRMED"}' "$PROVIDER_TOKEN"
@@ -194,14 +217,17 @@ if [[ -n "${RENTAL_ID:-}" ]]; then
 fi
 
 section "Admin"
-api GET "/api/admin/users" "" "$ADMIN_TOKEN"
+api GET "/api/admin/users?page=1&limit=10" "" "$ADMIN_TOKEN"
 assert_http "GET admin users" "200" "$LAST_HTTP"
+assert_paginated "admin users paginated" "$LAST_JSON"
 
-api GET "/api/admin/gear" "" "$ADMIN_TOKEN"
+api GET "/api/admin/gear?page=1&limit=10" "" "$ADMIN_TOKEN"
 assert_http "GET admin gear" "200" "$LAST_HTTP"
+assert_paginated "admin gear paginated" "$LAST_JSON"
 
-api GET "/api/admin/rentals" "" "$ADMIN_TOKEN"
+api GET "/api/admin/rentals?page=1&limit=10" "" "$ADMIN_TOKEN"
 assert_http "GET admin rentals" "200" "$LAST_HTTP"
+assert_paginated "admin rentals paginated" "$LAST_JSON"
 
 section "Authorization"
 api GET "/api/admin/users" "" "$CUSTOMER_TOKEN"
