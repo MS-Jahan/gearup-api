@@ -12,7 +12,7 @@ echo ""
 echo "Suggested video order:"
 echo "  1. Show Swagger in browser (https://gearup-api.vercel.app/api/docs)"
 echo "  2. Run this script in terminal"
-echo "  3. For Stripe: open demo/stripe-pay.html when flow 4 prompts you"
+echo "  3. For Stripe: open the payment URL printed in flow 4"
 echo ""
 
 read -r -p "Reset demo state and start fresh? [y/N] " ans

@@ -16,7 +16,7 @@ chmod +x *.sh
 
 ```json
 {
-  "url": "https://checkout.stripe.com/c/pay/cs_test_...",
+  "url": "https://gearup-api.vercel.app/api/payments/pay?session_id=cs_test_...",
   "sessionId": "cs_test_...",
   "payment": { "status": "PENDING" }
 }
