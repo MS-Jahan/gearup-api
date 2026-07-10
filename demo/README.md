@@ -20,12 +20,22 @@ Or clone with `git config core.autocrlf input` so shell scripts keep Unix line e
 
 ## Backdate DB before recording
 
+Use your **Neon direct URL** (not the localhost values from `.env.example`):
+
 ```bash
 DIRECT_URL="postgresql://...@ep-xxx.neon.tech/neondb?sslmode=require" bash demo/backdate-db.sh
 ```
 
-Reads `DIRECT_URL` from `.env` if present (handles Windows CRLF in `.env`).
-Uses plain Node — no tsx — so it works on WSL even if `node_modules` was installed on Windows.
+The script ignores `DATABASE_URL` from `.env` so a local Docker URL cannot override Neon.
+Uses plain Node — no tsx — so it works on WSL after `npm ci` in WSL.
+
+## E2E tests
+
+```bash
+npm run test:e2e
+# or against another host:
+BASE_URL=https://gearup-api.vercel.app bash scripts/e2e-test.sh
+```
 
 ## Stripe payment — hosted URL
 

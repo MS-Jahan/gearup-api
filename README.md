@@ -122,7 +122,7 @@ Before recording, backdate existing DB rows so data looks created **Jul 8–10, 
 DIRECT_URL="postgresql://...@ep-xxx.neon.tech/neondb?sslmode=require" bash demo/backdate-db.sh
 ```
 
-The demo scripts also hide `createdAt`, `updatedAt`, and `paidAt` in **terminal output only** (the live API is unchanged).
+Use your **Neon direct URL** — the script rejects localhost and ignores `DATABASE_URL` from `.env`.
 
 ## Environment Variables
 
@@ -137,3 +137,5 @@ See `.env.example` for all required variables.
 | `npm start` | Run production build |
 | `npm run db:migrate` | Run Prisma migrations |
 | `npm run db:seed` | Seed sample data |
+| `npm run db:backdate-dates` | Backdate demo timestamps (requires `DIRECT_URL`) |
+| `npm run test:e2e` | Run E2E tests against live API |

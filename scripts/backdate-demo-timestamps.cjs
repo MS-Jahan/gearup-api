@@ -1,19 +1,24 @@
 /**
  * Backdate demo timestamps so API responses show activity before July 10, 2026.
  *
- * Uses plain Node (no tsx/esbuild) so it works on WSL even when node_modules
- * was installed on Windows.
+ * Plain Node only — no tsx. Pass DIRECT_URL on the command line; does not read .env
+ * so a local DATABASE_URL in .env cannot override your Neon connection.
  */
 const { PrismaClient } = require("@prisma/client");
-const dotenv = require("dotenv");
 
-dotenv.config();
+const databaseUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
 
-if (process.env.DIRECT_URL) {
-  process.env.DATABASE_URL = process.env.DIRECT_URL;
+if (!databaseUrl) {
+  console.error("DIRECT_URL is required.");
+  console.error('  DIRECT_URL="postgresql://..." node scripts/backdate-demo-timestamps.cjs');
+  process.exit(1);
 }
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: { url: databaseUrl },
+  },
+});
 
 const D = {
   jul8morning: new Date("2026-07-08T04:00:00.000Z"),

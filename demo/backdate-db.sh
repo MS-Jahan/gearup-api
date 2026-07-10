@@ -31,11 +31,23 @@ DIRECT_URL="${DIRECT_URL//$'\r'/}"
 if [[ -z "${DIRECT_URL:-}" ]]; then
   echo "DIRECT_URL is not set."
   echo ""
-  echo "Run with your Neon direct connection string:"
-  echo '  DIRECT_URL="postgresql://..." bash demo/backdate-db.sh'
+  echo "Use your Neon direct connection string (not localhost from .env.example):"
+  echo '  DIRECT_URL="postgresql://...@ep-xxx.neon.tech/neondb?sslmode=require" ./demo/backdate-db.sh'
+  exit 1
+fi
+
+if [[ "$DIRECT_URL" == *localhost* || "$DIRECT_URL" == *127.0.0.1* ]]; then
+  echo "DIRECT_URL points to localhost ($DIRECT_URL)."
+  echo ""
+  echo "Backdate targets your deployed Neon database. Pass the Neon direct URL:"
+  echo '  DIRECT_URL="postgresql://...@ep-xxx.neon.tech/neondb?sslmode=require" ./demo/backdate-db.sh'
+  echo ""
+  echo "Find it in Neon dashboard → Connection details → Direct connection."
   exit 1
 fi
 
 echo "Backdating demo timestamps in the database (Jul 8–10, 2026)..."
 cd "$ROOT_DIR"
-DIRECT_URL="$DIRECT_URL" node scripts/backdate-demo-timestamps.cjs
+
+# Do not inherit DATABASE_URL from .env — only use DIRECT_URL for this script.
+env -u DATABASE_URL DIRECT_URL="$DIRECT_URL" node scripts/backdate-demo-timestamps.cjs
