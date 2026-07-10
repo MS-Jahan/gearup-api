@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import swaggerUi from "swagger-ui-express";
-import { swaggerSpec } from "./config/swagger";
+import { getSwaggerSpec } from "./config/swagger";
 import { errorHandler, notFoundHandler } from "./utils/apiResponse";
 
 import authRoutes from "./modules/auth/auth.routes";
@@ -23,9 +23,11 @@ app.get("/health", (_req, res) => {
   res.json({ success: true, message: "GearUp API is running" });
 });
 
-app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+const swaggerSetup = swaggerUi.setup(getSwaggerSpec());
+
+app.use("/api/docs", swaggerUi.serve, swaggerSetup);
 app.get("/api/docs.json", (_req, res) => {
-  res.json(swaggerSpec);
+  res.json(getSwaggerSpec());
 });
 
 app.use("/api/auth", authRoutes);

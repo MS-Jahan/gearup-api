@@ -1,0 +1,135 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "GearUp API",
+    "version": "1.0.0",
+    "description": "Sports and outdoor gear rental service backend API"
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Current host"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/reviews": {
+      "post": {
+        "tags": [
+          "Reviews"
+        ],
+        "summary": "Leave a review after gear is returned"
+      }
+    },
+    "/api/rentals": {
+      "post": {
+        "tags": [
+          "Rentals"
+        ],
+        "summary": "Create a rental order"
+      }
+    },
+    "/api/provider/gear": {
+      "post": {
+        "tags": [
+          "Provider"
+        ],
+        "summary": "Add gear to inventory"
+      }
+    },
+    "/api/provider/orders": {
+      "get": {
+        "tags": [
+          "Provider"
+        ],
+        "summary": "View incoming rental orders"
+      }
+    },
+    "/api/payments/create": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Create Stripe payment intent for rental order"
+      }
+    },
+    "/api/payments/confirm": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Confirm payment after Stripe succeeds"
+      }
+    },
+    "/api/gear": {
+      "get": {
+        "tags": [
+          "Gear"
+        ],
+        "summary": "Browse gear with filters"
+      }
+    },
+    "/api/gear/{id}": {
+      "get": {
+        "tags": [
+          "Gear"
+        ],
+        "summary": "Get gear details"
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "tags": [
+          "Categories"
+        ],
+        "summary": "List all gear categories"
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Register a new customer or provider"
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Login and get JWT token"
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get current authenticated user"
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "List all users"
+      }
+    }
+  },
+  "tags": []
+}

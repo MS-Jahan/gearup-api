@@ -1,29 +1,14 @@
-import swaggerJsdoc from "swagger-jsdoc";
+import baseSpec from "./swagger.json";
+import { config } from "./index";
 
-const options: swaggerJsdoc.Options = {
-  definition: {
-    openapi: "3.0.0",
-    info: {
-      title: "GearUp API",
-      version: "1.0.0",
-      description:
-        "Sports and outdoor gear rental service backend API",
-    },
-    servers: [
-      { url: "http://localhost:5000", description: "Local" },
-    ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: "http",
-          scheme: "bearer",
-          bearerFormat: "JWT",
-        },
-      },
-    },
-    security: [{ bearerAuth: [] }],
-  },
-  apis: ["./src/modules/**/*.ts"],
+const getServerUrl = (): string => {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return `http://localhost:${config.port}`;
 };
 
-export const swaggerSpec = swaggerJsdoc(options);
+export const getSwaggerSpec = () => ({
+  ...baseSpec,
+  servers: [{ url: getServerUrl(), description: "API server" }],
+});

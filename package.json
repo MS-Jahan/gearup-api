@@ -5,7 +5,8 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "node scripts/generate-swagger.cjs && tsc",
+    "postinstall": "prisma generate && node scripts/generate-swagger.cjs",
     "start": "node dist/server.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -26,7 +27,8 @@
     "stripe": "^18.3.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "zod": "^4.0.5"
+    "zod": "^4.0.5",
+    "prisma": "^6.11.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -36,7 +38,6 @@
     "@types/node": "^24.0.13",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
-    "prisma": "^6.11.1",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   }

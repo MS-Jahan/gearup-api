@@ -60,6 +60,28 @@ Test card: `4242 4242 4242 4242` (any future expiry, any CVC)
 Swagger UI: `/api/docs`  
 OpenAPI JSON: `/api/docs.json`
 
+Spec is pre-generated at install (`postinstall`) so it works on Vercel serverless.
+
+## Vercel + Neon
+
+Set these env vars in Vercel:
+
+| Variable | Purpose |
+|----------|---------|
+| `DATABASE_URL` | Neon **pooled** URL (`-pooler.neon.tech`, add `?pgbouncer=true&connection_limit=1`) |
+| `DIRECT_URL` | Neon **direct** URL (for migrations only) |
+| `JWT_SECRET` | Random secret string |
+| `STRIPE_SECRET_KEY` | Stripe test/live secret key |
+
+Run migrations locally against Neon direct URL:
+
+```bash
+DIRECT_URL="postgresql://...@ep-xxx.neon.tech/..." npx prisma migrate deploy
+npm run db:seed
+```
+
+`postinstall` runs `prisma generate` and regenerates `swagger.json` on every deploy.
+
 ## Environment Variables
 
 See `.env.example` for all required variables.
@@ -69,7 +91,7 @@ See `.env.example` for all required variables.
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start dev server with hot reload |
-| `npm run build` | Compile TypeScript |
+| `npm run build` | Generate swagger spec + compile TypeScript |
 | `npm start` | Run production build |
 | `npm run db:migrate` | Run Prisma migrations |
 | `npm run db:seed` | Seed sample data |
