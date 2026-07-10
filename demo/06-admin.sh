@@ -44,11 +44,13 @@ api_request GET "/api/admin/gear" "" "$ADMIN_TOKEN" "ADMIN"
 pause_step
 api_request GET "/api/admin/rentals" "" "$ADMIN_TOKEN" "ADMIN"
 
+DEMO_CAT_NAME="Demo Category $(date +%s)"
 pause_step
 api_request POST "/api/categories" \
-  '{"name":"Demo Category Video","description":"Temporary category for demo"}' \
+  "{\"name\":\"${DEMO_CAT_NAME}\",\"description\":\"Temporary category for demo\"}" \
   "$ADMIN_TOKEN" "ADMIN"
 DEMO_CAT_ID="$(json_field "$LAST_RESPONSE" "['data']['id']")"
+fail_if_empty "Category ID" "$DEMO_CAT_ID"
 
 pause_step
 api_request PATCH "/api/categories/${DEMO_CAT_ID}" \

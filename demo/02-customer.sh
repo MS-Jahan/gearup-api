@@ -21,18 +21,28 @@ use_token "CUSTOMER" "$CUSTOMER_TOKEN"
 api_request PATCH "/api/profile" \
   '{"name":"Rahim Khan (Demo)"}' "$CUSTOMER_TOKEN" "CUSTOMER"
 
-if [[ -z "${GEAR_ID:-}" ]]; then
-  api_request GET "/api/gear?limit=1&available=true"
-  GEAR_ID="$(json_field "$LAST_RESPONSE" "['data']['items'][0]['id']")"
-  save_state GEAR_ID "$GEAR_ID"
-fi
+GEAR_ID="$(pick_available_gear "$CUSTOMER_TOKEN")"
+fail_if_empty "Available gear (stock > 0)" "$GEAR_ID"
+save_state GEAR_ID "$GEAR_ID"
+echo -e "${DIM}Selected gear with stock: ${GEAR_ID}${RESET}"
+
+DATES="$(rental_date_range)"
+START_DATE="${DATES%%|*}"
+END_DATE="${DATES##*|}"
 
 pause_step
 use_token "CUSTOMER" "$CUSTOMER_TOKEN"
 api_request POST "/api/rentals" \
-  "{\"items\":[{\"gearItemId\":\"${GEAR_ID}\",\"quantity\":1}],\"startDate\":\"2026-11-01T00:00:00.000Z\",\"endDate\":\"2026-11-04T00:00:00.000Z\"}" \
+  "{\"items\":[{\"gearItemId\":\"${GEAR_ID}\",\"quantity\":1}],\"startDate\":\"${START_DATE}\",\"endDate\":\"${END_DATE}\"}" \
   "$CUSTOMER_TOKEN" "CUSTOMER"
+
+if ! api_ok; then
+  echo -e "${RED}✗ Rental failed — cannot continue. Pick another gear or restore stock.${RESET}"
+  exit 1
+fi
+
 RENTAL_ID="$(json_field "$LAST_RESPONSE" "['data']['id']")"
+fail_if_empty "Rental order ID" "$RENTAL_ID"
 save_state RENTAL_ID "$RENTAL_ID"
 
 pause_step

@@ -198,7 +198,59 @@ api_request() {
 json_field() {
   local json="$1"
   local field="$2"
-  echo "$json" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d${field})" 2>/dev/null
+  echo "$json" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    val = d${field}
+    print('' if val is None else val)
+except Exception:
+    print('')
+" 2>/dev/null || true
+}
+
+api_ok() {
+  [[ "${LAST_HTTP_CODE:-0}" =~ ^2 ]]
+}
+
+pick_available_gear() {
+  local token="${1:-}"
+  local url="${BASE_URL}/api/gear?available=true&limit=30"
+  local raw
+  if [[ -n "$token" ]]; then
+    raw="$(curl -sS "$url" -H "Authorization: Bearer ${token}")"
+  else
+    raw="$(curl -sS "$url")"
+  fi
+  echo "$raw" | python3 -c "
+import sys, json
+payload = json.load(sys.stdin)
+data = payload.get('data', {})
+items = data.get('items', data if isinstance(data, list) else [])
+for item in items:
+    stock = int(item.get('stock', 0) or 0)
+    if stock > 0 and item.get('status') == 'AVAILABLE':
+        print(item['id'])
+        break
+" 2>/dev/null || true
+}
+
+rental_date_range() {
+  python3 -c "
+from datetime import datetime, timedelta, timezone
+start = datetime.now(timezone.utc).date() + timedelta(days=30)
+end = start + timedelta(days=3)
+print(f'{start.isoformat()}T00:00:00.000Z|{end.isoformat()}T00:00:00.000Z')
+"
+}
+
+fail_if_empty() {
+  local label="$1"
+  local value="$2"
+  if [[ -z "$value" || "$value" == "None" ]]; then
+    echo -e "${RED}✗ ${label} missing — stopping this flow.${RESET}"
+    exit 1
+  fi
 }
 
 reset_demo_state() {

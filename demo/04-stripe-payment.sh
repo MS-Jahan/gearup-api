@@ -21,6 +21,12 @@ api_request POST "/api/payments/create" \
 PAYMENT_ID="$(json_field "$LAST_RESPONSE" "['data']['payment']['id']")"
 SESSION_ID="$(json_field "$LAST_RESPONSE" "['data']['sessionId']")"
 CHECKOUT_URL="$(json_field "$LAST_RESPONSE" "['data']['url']")"
+
+if ! api_ok; then
+  echo -e "${RED}✗ Payment create failed${RESET}"
+  exit 1
+fi
+fail_if_empty "Payment URL" "$CHECKOUT_URL"
 save_state PAYMENT_ID "$PAYMENT_ID"
 save_state SESSION_ID "$SESSION_ID"
 save_state CHECKOUT_URL "$CHECKOUT_URL"

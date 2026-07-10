@@ -22,11 +22,13 @@ save_state CATEGORY_ID "$CATEGORY_ID"
 save_state CATEGORY_SLUG "$CATEGORY_SLUG"
 
 pause_step
-api_request GET "/api/gear?category=${CATEGORY_SLUG}&minPrice=10&maxPrice=100&limit=5"
+api_request GET "/api/gear?available=true&limit=10"
 
 pause_step
-GEAR_ID="$(json_field "$LAST_RESPONSE" "['data']['items'][0]['id']")"
+GEAR_ID="$(pick_available_gear)"
+fail_if_empty "Available gear" "$GEAR_ID"
 save_state GEAR_ID "$GEAR_ID"
+echo -e "${DIM}Selected gear with stock: ${GEAR_ID}${RESET}"
 api_request GET "/api/gear/${GEAR_ID}"
 
 echo -e "${GREEN}Public flow complete.${RESET} GEAR_ID=${GEAR_ID}"

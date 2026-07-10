@@ -12,7 +12,13 @@ if [[ -z "${RENTAL_ID:-}" || -z "${PROVIDER_TOKEN:-}" || -z "${CUSTOMER_TOKEN:-}
 fi
 
 ORDER_STATUS="$(curl -s "${BASE_URL}/api/rentals/${RENTAL_ID}" \
-  -H "Authorization: Bearer ${CUSTOMER_TOKEN}" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['status'])")"
+  -H "Authorization: Bearer ${CUSTOMER_TOKEN}" | python3 -c "
+import sys, json
+try:
+    print(json.load(sys.stdin)['data']['status'])
+except Exception:
+    print('UNKNOWN')
+" 2>/dev/null || echo "UNKNOWN")"
 
 if [[ "$ORDER_STATUS" != "PAID" && "$ORDER_STATUS" != "PICKED_UP" && "$ORDER_STATUS" != "RETURNED" ]]; then
   echo -e "${YELLOW}Order is ${ORDER_STATUS}. Complete Stripe payment first (04-stripe-payment.sh).${RESET}"
