@@ -3,7 +3,7 @@ import { prisma } from "../../config/database";
 import { AppError, sendSuccess } from "../../utils/apiResponse";
 import { calculateRentalDays, AuthRequest, getParam } from "../../utils/helpers";
 import { authenticate, authorize, asyncHandler } from "../../middleware/auth";
-import { createRentalSchema } from "../../middleware/validate";
+import { createRentalSchema, rentalListQuerySchema } from "../../middleware/validate";
 
 const router = Router();
 
@@ -110,37 +110,53 @@ router.post(
  * /api/rentals:
  *   get:
  *     tags: [Rentals]
- *     summary: List current customer's rental orders
+ *     summary: List current customer's rental orders (paginated)
  *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           minimum: 1
- *           maximum: 100
- *         description: Max number of recent orders to return (newest first)
+ *           maximum: 50
+ *           default: 10
  */
 router.get(
   "/",
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const rawLimit = req.query.limit;
-    const limit =
-      rawLimit !== undefined ? parseInt(String(rawLimit), 10) : undefined;
-    if (limit !== undefined && (Number.isNaN(limit) || limit < 1 || limit > 100)) {
-      throw new AppError("limit must be between 1 and 100", 400);
-    }
+    const query = rentalListQuerySchema.parse(req.query);
+    const where = { customerId: req.user!.userId };
+    const skip = (query.page - 1) * query.limit;
 
-    const orders = await prisma.rentalOrder.findMany({
-      where: { customerId: req.user!.userId },
-      include: {
-        items: { include: { gearItem: true } },
-        payment: true,
-        provider: { select: { id: true, name: true } },
+    const [items, total] = await Promise.all([
+      prisma.rentalOrder.findMany({
+        where,
+        include: {
+          items: { include: { gearItem: true } },
+          payment: true,
+          provider: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: query.limit,
+      }),
+      prisma.rentalOrder.count({ where }),
+    ]);
+
+    sendSuccess(res, {
+      items,
+      meta: {
+        total,
+        page: query.page,
+        limit: query.limit,
+        totalPages: Math.ceil(total / query.limit) || 1,
       },
-      orderBy: { createdAt: "desc" },
-      ...(limit !== undefined ? { take: limit } : {}),
     });
-    sendSuccess(res, orders);
   })
 );
 
