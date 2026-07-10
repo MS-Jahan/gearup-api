@@ -63,7 +63,8 @@
         "tags": [
           "Payments"
         ],
-        "summary": "Create Stripe payment intent for rental order"
+        "summary": "Create Stripe payment intent for rental order",
+        "description": "Returns a clientSecret for Stripe.js. When the customer pays, Stripe sends\n`payment_intent.succeeded` to `/api/payments/webhook` and the order is marked PAID\nautomatically. `/api/payments/confirm` remains available as a manual fallback.\n"
       }
     },
     "/api/payments/confirm": {
@@ -71,7 +72,8 @@
         "tags": [
           "Payments"
         ],
-        "summary": "Confirm payment after Stripe succeeds"
+        "summary": "Confirm payment after Stripe succeeds (optional fallback)",
+        "description": "Prefer the Stripe webhook at `/api/payments/webhook` for automatic confirmation.\nUse this endpoint only when webhooks are unavailable (e.g. local Swagger testing).\n"
       }
     },
     "/api/gear": {

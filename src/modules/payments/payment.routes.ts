@@ -1,11 +1,12 @@
 import { Router, Response } from "express";
-import Stripe from "stripe";
 import { prisma } from "../../config/database";
 import { config } from "../../config";
 import { AppError, sendSuccess } from "../../utils/apiResponse";
 import { authenticate, authorize, asyncHandler } from "../../middleware/auth";
 import { confirmPaymentSchema, createPaymentSchema } from "../../middleware/validate";
 import { AuthRequest, getParam } from "../../utils/helpers";
+import { completePaymentByIntentId } from "./payment.service";
+import Stripe from "stripe";
 
 const router = Router();
 
@@ -24,6 +25,10 @@ router.use(authenticate, authorize("CUSTOMER"));
  *   post:
  *     tags: [Payments]
  *     summary: Create Stripe payment intent for rental order
+ *     description: |
+ *       Returns a clientSecret for Stripe.js. When the customer pays, Stripe sends
+ *       `payment_intent.succeeded` to `/api/payments/webhook` and the order is marked PAID
+ *       automatically. `/api/payments/confirm` remains available as a manual fallback.
  */
 router.post(
   "/create",
@@ -91,55 +96,30 @@ router.post(
  * /api/payments/confirm:
  *   post:
  *     tags: [Payments]
- *     summary: Confirm payment after Stripe succeeds
+ *     summary: Confirm payment after Stripe succeeds (optional fallback)
+ *     description: |
+ *       Prefer the Stripe webhook at `/api/payments/webhook` for automatic confirmation.
+ *       Use this endpoint only when webhooks are unavailable (e.g. local Swagger testing).
  */
 router.post(
   "/confirm",
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const { paymentIntentId } = confirmPaymentSchema.parse(req.body);
 
-    const payment = await prisma.payment.findFirst({
-      where: {
-        stripePaymentIntentId: paymentIntentId,
-        customerId: req.user!.userId,
-      },
-      include: { rentalOrder: true },
-    });
-
-    if (!payment) {
-      throw new AppError("Payment not found", 404);
-    }
-
-    if (payment.status === "COMPLETED") {
-      sendSuccess(res, payment, "Payment already confirmed");
-      return;
-    }
-
     const stripe = getStripe();
-    const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const { payment, alreadyCompleted } = await completePaymentByIntentId(
+      paymentIntentId,
+      {
+        customerId: req.user!.userId,
+        verifyWithStripe: stripe,
+      }
+    );
 
-    if (intent.status !== "succeeded") {
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: { status: "FAILED" },
-      });
-      throw new AppError("Payment not completed", 400, {
-        stripeStatus: intent.status,
-      });
-    }
-
-    const [updatedPayment] = await prisma.$transaction([
-      prisma.payment.update({
-        where: { id: payment.id },
-        data: { status: "COMPLETED", paidAt: new Date() },
-      }),
-      prisma.rentalOrder.update({
-        where: { id: payment.rentalOrderId },
-        data: { status: "PAID" },
-      }),
-    ]);
-
-    sendSuccess(res, updatedPayment, "Payment confirmed");
+    sendSuccess(
+      res,
+      payment,
+      alreadyCompleted ? "Payment already confirmed" : "Payment confirmed"
+    );
   })
 );
 

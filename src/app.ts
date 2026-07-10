@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import { getSwaggerSpec } from "./config/swagger";
 import { errorHandler, notFoundHandler } from "./utils/apiResponse";
+import { stripeWebhookHandler } from "./modules/payments/payment.webhook";
 
 import authRoutes from "./modules/auth/auth.routes";
 import categoryRoutes from "./modules/categories/category.routes";
@@ -14,6 +15,12 @@ import adminRoutes from "./modules/admin/admin.routes";
 import profileRoutes from "./modules/profile/profile.routes";
 
 const app = express();
+
+app.post(
+  "/api/payments/webhook",
+  express.raw({ type: "application/json" }),
+  stripeWebhookHandler
+);
 
 app.use(cors());
 app.use(express.json());

@@ -53,7 +53,32 @@ Swagger docs at `http://localhost:5000/api/docs`
 
 Use test mode keys from [Stripe Dashboard](https://dashboard.stripe.com/test/apikeys).
 
-Test card: `4242 4242 4242 4242` (any future expiry, any CVC)
+Test card: `4242 4242 4242 4242` (any future expiry, any CVC) — collect via **Stripe.js** on a frontend, not by posting the number to this API.
+
+### Payment flow
+
+1. Customer calls `POST /api/payments/create` → receives `clientSecret`
+2. Frontend confirms payment with Stripe.js (`stripe.confirmCardPayment`)
+3. Stripe calls `POST /api/payments/webhook` → order becomes **PAID** automatically
+4. Optional fallback: `POST /api/payments/confirm` (manual / Swagger testing)
+
+### Webhook setup
+
+**Production (Vercel)**
+
+1. [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/test/webhooks) → **Add endpoint**
+2. URL: `https://gearup-api.vercel.app/api/payments/webhook`
+3. Events: `payment_intent.succeeded`, `payment_intent.payment_failed`
+4. Copy the **Signing secret** (`whsec_...`) into Vercel env var `STRIPE_WEBHOOK_SECRET`
+5. Redeploy
+
+**Local development**
+
+```bash
+stripe listen --forward-to localhost:5000/api/payments/webhook
+```
+
+Use the `whsec_...` secret printed by the CLI in your local `.env` as `STRIPE_WEBHOOK_SECRET`.
 
 ## API Documentation
 
@@ -72,6 +97,7 @@ Set these env vars in Vercel:
 | `DIRECT_URL` | Neon **direct** URL (for migrations only) |
 | `JWT_SECRET` | Random secret string |
 | `STRIPE_SECRET_KEY` | Stripe test/live secret key |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret (`whsec_...`) |
 
 Run migrations locally against Neon direct URL:
 
