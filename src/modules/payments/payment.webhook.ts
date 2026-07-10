@@ -57,7 +57,7 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
         if (session.id) {
           await prisma.payment.updateMany({
             where: {
-              stripeCheckoutSessionId: session.id,
+              stripePaymentIntentId: session.id,
               status: "PENDING",
             },
             data: { status: "FAILED" },

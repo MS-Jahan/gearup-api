@@ -135,9 +135,12 @@ router.post(
     const gearNames = order.items.map((i) => i.gearItem.name).join(", ");
     const baseUrl = config.appUrl.replace(/\/$/, "");
 
-    if (existing?.stripeCheckoutSessionId) {
+    if (
+      existing?.stripePaymentIntentId &&
+      existing.stripePaymentIntentId.startsWith("cs_")
+    ) {
       const oldSession = await stripe.checkout.sessions.retrieve(
-        existing.stripeCheckoutSessionId
+        existing.stripePaymentIntentId
       );
       if (oldSession.status === "open" && oldSession.url) {
         sendSuccess(
@@ -188,12 +191,11 @@ router.post(
         customerId: req.user!.userId,
         amount: order.totalAmount,
         provider: "STRIPE",
-        stripeCheckoutSessionId: session.id,
+        stripePaymentIntentId: session.id,
         status: "PENDING",
       },
       update: {
-        stripeCheckoutSessionId: session.id,
-        stripePaymentIntentId: null,
+        stripePaymentIntentId: session.id,
         status: "PENDING",
         paidAt: null,
       },

@@ -8,6 +8,8 @@ export type PaymentCompletionResult = {
   alreadyCompleted: boolean;
 };
 
+const isCheckoutSessionId = (id: string) => id.startsWith("cs_");
+
 export async function findPaymentByIntentId(
   paymentIntentId: string,
   customerId?: string
@@ -27,31 +29,21 @@ export async function findPaymentBySessionId(
 ) {
   return prisma.payment.findFirst({
     where: {
-      stripeCheckoutSessionId: sessionId,
+      stripePaymentIntentId: sessionId,
       ...(customerId ? { customerId } : {}),
     },
     include: { rentalOrder: true },
   });
 }
 
-async function markPaymentCompleted(paymentId: string, rentalOrderId: string) {
-  const [updatedPayment] = await prisma.$transaction([
-    prisma.payment.update({
-      where: { id: paymentId },
-      data: { status: "COMPLETED", paidAt: new Date() },
-    }),
-    prisma.rentalOrder.update({
-      where: { id: rentalOrderId },
-      data: { status: "PAID" },
-    }),
-  ]);
-  return updatedPayment;
-}
-
 export async function completePaymentByIntentId(
   paymentIntentId: string,
   options?: { customerId?: string; verifyWithStripe?: Stripe }
 ): Promise<PaymentCompletionResult> {
+  if (isCheckoutSessionId(paymentIntentId)) {
+    throw new AppError("Use sessionId for checkout session confirmation", 400);
+  }
+
   const payment = await findPaymentByIntentId(
     paymentIntentId,
     options?.customerId
@@ -80,10 +72,16 @@ export async function completePaymentByIntentId(
     }
   }
 
-  const updatedPayment = await markPaymentCompleted(
-    payment.id,
-    payment.rentalOrderId
-  );
+  const [updatedPayment] = await prisma.$transaction([
+    prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: "COMPLETED", paidAt: new Date() },
+    }),
+    prisma.rentalOrder.update({
+      where: { id: payment.rentalOrderId },
+      data: { status: "PAID" },
+    }),
+  ]);
 
   return { payment: updatedPayment, alreadyCompleted: false };
 }
@@ -97,19 +95,17 @@ export async function completePaymentByCheckoutSession(
     throw new AppError("Checkout session missing rental order metadata", 400);
   }
 
-  let payment = session.id
-    ? await findPaymentBySessionId(session.id, options?.customerId)
-    : null;
-
-  if (!payment) {
-    payment = await prisma.payment.findFirst({
+  let payment =
+    (session.id
+      ? await findPaymentBySessionId(session.id, options?.customerId)
+      : null) ??
+    (await prisma.payment.findFirst({
       where: {
         rentalOrderId,
         ...(options?.customerId ? { customerId: options.customerId } : {}),
       },
       include: { rentalOrder: true },
-    });
-  }
+    }));
 
   if (!payment) {
     throw new AppError("Payment not found for checkout session", 404);
@@ -118,11 +114,6 @@ export async function completePaymentByCheckoutSession(
   if (payment.status === "COMPLETED") {
     return { payment, alreadyCompleted: true };
   }
-
-  const paymentIntentId =
-    typeof session.payment_intent === "string"
-      ? session.payment_intent
-      : session.payment_intent?.id;
 
   if (options?.verifyWithStripe && session.id) {
     const verified = await options.verifyWithStripe.checkout.sessions.retrieve(
@@ -135,20 +126,25 @@ export async function completePaymentByCheckoutSession(
     }
   }
 
-  const updatedPayment = await prisma.payment.update({
-    where: { id: payment.id },
-    data: {
-      status: "COMPLETED",
-      paidAt: new Date(),
-      stripeCheckoutSessionId: session.id ?? payment.stripeCheckoutSessionId,
-      ...(paymentIntentId ? { stripePaymentIntentId: paymentIntentId } : {}),
-    },
-  });
+  const paymentIntentId =
+    typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : session.payment_intent?.id;
 
-  await prisma.rentalOrder.update({
-    where: { id: payment.rentalOrderId },
-    data: { status: "PAID" },
-  });
+  const [updatedPayment] = await prisma.$transaction([
+    prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: "COMPLETED",
+        paidAt: new Date(),
+        ...(paymentIntentId ? { stripePaymentIntentId: paymentIntentId } : {}),
+      },
+    }),
+    prisma.rentalOrder.update({
+      where: { id: payment.rentalOrderId },
+      data: { status: "PAID" },
+    }),
+  ]);
 
   return { payment: updatedPayment, alreadyCompleted: false };
 }
