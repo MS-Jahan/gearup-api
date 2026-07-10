@@ -105,6 +105,13 @@ router.post(
   })
 );
 
+/**
+ * @swagger
+ * /api/rentals:
+ *   get:
+ *     tags: [Rentals]
+ *     summary: List current customer's rental orders
+ */
 router.get(
   "/",
   asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -121,6 +128,13 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * /api/rentals/{id}:
+ *   get:
+ *     tags: [Rentals]
+ *     summary: Get rental order details
+ */
 router.get(
   "/:id",
   asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -150,6 +164,13 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * /api/rentals/{id}/cancel:
+ *   patch:
+ *     tags: [Rentals]
+ *     summary: Cancel a rental order (PLACED or CONFIRMED only)
+ */
 router.patch(
   "/:id/cancel",
   asyncHandler(async (req: AuthRequest, res: Response) => {

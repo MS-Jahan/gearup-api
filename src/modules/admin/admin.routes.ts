@@ -32,6 +32,13 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * /api/admin/users/{id}:
+ *   patch:
+ *     tags: [Admin]
+ *     summary: Update user status (suspend or activate)
+ */
 router.patch(
   "/users/:id",
   asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -55,6 +62,13 @@ router.patch(
   })
 );
 
+/**
+ * @swagger
+ * /api/admin/gear:
+ *   get:
+ *     tags: [Admin]
+ *     summary: List all gear listings
+ */
 router.get(
   "/gear",
   asyncHandler(async (_req: AuthRequest, res: Response) => {
@@ -69,6 +83,13 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * /api/admin/rentals:
+ *   get:
+ *     tags: [Admin]
+ *     summary: List all rental orders
+ */
 router.get(
   "/rentals",
   asyncHandler(async (_req: AuthRequest, res: Response) => {

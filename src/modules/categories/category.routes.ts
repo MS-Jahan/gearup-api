@@ -25,6 +25,13 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * /api/categories:
+ *   post:
+ *     tags: [Categories]
+ *     summary: Create a gear category (admin only)
+ */
 router.post(
   "/",
   authenticate,
@@ -44,6 +51,13 @@ router.post(
   })
 );
 
+/**
+ * @swagger
+ * /api/categories/{id}:
+ *   patch:
+ *     tags: [Categories]
+ *     summary: Update a gear category (admin only)
+ */
 router.patch(
   "/:id",
   authenticate,
@@ -63,6 +77,13 @@ router.patch(
   })
 );
 
+/**
+ * @swagger
+ * /api/categories/{id}:
+ *   delete:
+ *     tags: [Categories]
+ *     summary: Delete an empty gear category (admin only)
+ */
 router.delete(
   "/:id",
   authenticate,

@@ -34,12 +34,42 @@
         "summary": "Leave a review after gear is returned"
       }
     },
+    "/api/reviews/gear/{gearId}": {
+      "get": {
+        "tags": [
+          "Reviews"
+        ],
+        "summary": "Get reviews for a gear item"
+      }
+    },
     "/api/rentals": {
       "post": {
         "tags": [
           "Rentals"
         ],
         "summary": "Create a rental order"
+      },
+      "get": {
+        "tags": [
+          "Rentals"
+        ],
+        "summary": "List current customer's rental orders"
+      }
+    },
+    "/api/rentals/{id}": {
+      "get": {
+        "tags": [
+          "Rentals"
+        ],
+        "summary": "Get rental order details"
+      }
+    },
+    "/api/rentals/{id}/cancel": {
+      "patch": {
+        "tags": [
+          "Rentals"
+        ],
+        "summary": "Cancel a rental order (PLACED or CONFIRMED only)"
       }
     },
     "/api/provider/gear": {
@@ -50,12 +80,48 @@
         "summary": "Add gear to inventory"
       }
     },
+    "/api/provider/gear/{id}": {
+      "put": {
+        "tags": [
+          "Provider"
+        ],
+        "summary": "Update a gear listing"
+      },
+      "delete": {
+        "tags": [
+          "Provider"
+        ],
+        "summary": "Remove gear from inventory"
+      }
+    },
     "/api/provider/orders": {
       "get": {
         "tags": [
           "Provider"
         ],
         "summary": "View incoming rental orders"
+      }
+    },
+    "/api/provider/orders/{id}": {
+      "patch": {
+        "tags": [
+          "Provider"
+        ],
+        "summary": "Update rental order status"
+      }
+    },
+    "/api/profile": {
+      "get": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Get current user profile"
+      },
+      "patch": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Update current user profile"
       }
     },
     "/api/payments/create": {
@@ -74,6 +140,22 @@
         ],
         "summary": "Confirm payment after Stripe succeeds (optional fallback)",
         "description": "Prefer the Stripe webhook at `/api/payments/webhook` for automatic confirmation.\nUse this endpoint only when webhooks are unavailable (e.g. local Swagger testing).\n"
+      }
+    },
+    "/api/payments": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Get customer payment history"
+      }
+    },
+    "/api/payments/{id}": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Get payment details by ID"
       }
     },
     "/api/gear": {
@@ -98,6 +180,26 @@
           "Categories"
         ],
         "summary": "List all gear categories"
+      },
+      "post": {
+        "tags": [
+          "Categories"
+        ],
+        "summary": "Create a gear category (admin only)"
+      }
+    },
+    "/api/categories/{id}": {
+      "patch": {
+        "tags": [
+          "Categories"
+        ],
+        "summary": "Update a gear category (admin only)"
+      },
+      "delete": {
+        "tags": [
+          "Categories"
+        ],
+        "summary": "Delete an empty gear category (admin only)"
       }
     },
     "/api/auth/register": {
@@ -130,6 +232,30 @@
           "Admin"
         ],
         "summary": "List all users"
+      }
+    },
+    "/api/admin/users/{id}": {
+      "patch": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Update user status (suspend or activate)"
+      }
+    },
+    "/api/admin/gear": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "List all gear listings"
+      }
+    },
+    "/api/admin/rentals": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "List all rental orders"
       }
     }
   },

@@ -123,6 +123,13 @@ router.post(
   })
 );
 
+/**
+ * @swagger
+ * /api/payments:
+ *   get:
+ *     tags: [Payments]
+ *     summary: Get customer payment history
+ */
 router.get(
   "/",
   asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -139,6 +146,13 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * /api/payments/{id}:
+ *   get:
+ *     tags: [Payments]
+ *     summary: Get payment details by ID
+ */
 router.get(
   "/:id",
   asyncHandler(async (req: AuthRequest, res: Response) => {

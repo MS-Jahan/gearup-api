@@ -48,6 +48,13 @@ router.post(
   })
 );
 
+/**
+ * @swagger
+ * /api/provider/gear/{id}:
+ *   put:
+ *     tags: [Provider]
+ *     summary: Update a gear listing
+ */
 router.put(
   "/gear/:id",
   asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -85,6 +92,13 @@ router.put(
   })
 );
 
+/**
+ * @swagger
+ * /api/provider/gear/{id}:
+ *   delete:
+ *     tags: [Provider]
+ *     summary: Remove gear from inventory
+ */
 router.delete(
   "/gear/:id",
   asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -124,6 +138,13 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * /api/provider/orders/{id}:
+ *   patch:
+ *     tags: [Provider]
+ *     summary: Update rental order status
+ */
 router.patch(
   "/orders/:id",
   asyncHandler(async (req: AuthRequest, res: Response) => {

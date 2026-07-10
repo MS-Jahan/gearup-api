@@ -61,6 +61,13 @@ router.post(
   })
 );
 
+/**
+ * @swagger
+ * /api/reviews/gear/{gearId}:
+ *   get:
+ *     tags: [Reviews]
+ *     summary: Get reviews for a gear item
+ */
 router.get(
   "/gear/:gearId",
   asyncHandler(async (req: AuthRequest, res: Response) => {

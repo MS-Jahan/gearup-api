@@ -8,6 +8,13 @@ import { AuthRequest } from "../../utils/helpers";
 
 const router = Router();
 
+/**
+ * @swagger
+ * /api/profile:
+ *   get:
+ *     tags: [Profile]
+ *     summary: Get current user profile
+ */
 router.get(
   "/",
   authenticate,
@@ -20,6 +27,13 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * /api/profile:
+ *   patch:
+ *     tags: [Profile]
+ *     summary: Update current user profile
+ */
 router.patch(
   "/",
   authenticate,
