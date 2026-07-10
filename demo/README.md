@@ -10,6 +10,22 @@ chmod +x *.sh
 ./run-all.sh
 ```
 
+On Windows/WSL, if scripts fail with `bash\r: No such file or directory`, run once:
+
+```bash
+dos2unix demo/*.sh
+```
+
+Or clone with `git config core.autocrlf input` so shell scripts keep Unix line endings.
+
+## Backdate DB before recording
+
+```bash
+DIRECT_URL="postgresql://...@ep-xxx.neon.tech/neondb?sslmode=require" bash demo/backdate-db.sh
+```
+
+Reads `DIRECT_URL` from `.env` if present (handles Windows CRLF in `.env`).
+
 ## Stripe payment — hosted URL
 
 `POST /api/payments/create` returns a **`url`** field:
