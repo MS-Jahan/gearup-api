@@ -38,4 +38,4 @@ fi
 
 echo "Backdating demo timestamps in the database (Jul 8–10, 2026)..."
 cd "$ROOT_DIR"
-DIRECT_URL="$DIRECT_URL" npm run db:backdate-dates
+DIRECT_URL="$DIRECT_URL" node scripts/backdate-demo-timestamps.cjs

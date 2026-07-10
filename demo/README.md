@@ -25,6 +25,7 @@ DIRECT_URL="postgresql://...@ep-xxx.neon.tech/neondb?sslmode=require" bash demo/
 ```
 
 Reads `DIRECT_URL` from `.env` if present (handles Windows CRLF in `.env`).
+Uses plain Node — no tsx — so it works on WSL even if `node_modules` was installed on Windows.
 
 ## Stripe payment — hosted URL
 
