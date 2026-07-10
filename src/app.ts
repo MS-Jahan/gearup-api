@@ -23,6 +23,19 @@ app.get("/health", (_req, res) => {
   res.json({ success: true, message: "GearUp API is running" });
 });
 
+app.get("/", (_req, res) => {
+  res.json({
+    success: true,
+    message: "GearUp API — sports gear rental backend",
+    data: {
+      docs: "/api/docs",
+      openApi: "/api/docs.json",
+      health: "/health",
+      apiPrefix: "/api",
+    },
+  });
+});
+
 const swaggerSetup = swaggerUi.setup(getSwaggerSpec());
 
 app.use("/api/docs", swaggerUi.serve, swaggerSetup);
