@@ -56,9 +56,14 @@ export const createPaymentSchema = z.object({
   rentalOrderId: z.string().min(1),
 });
 
-export const confirmPaymentSchema = z.object({
-  paymentIntentId: z.string().min(1),
-});
+export const confirmPaymentSchema = z
+  .object({
+    paymentIntentId: z.string().min(1).optional(),
+    sessionId: z.string().min(1).optional(),
+  })
+  .refine((data) => data.paymentIntentId || data.sessionId, {
+    message: "Either paymentIntentId or sessionId is required",
+  });
 
 export const reviewSchema = z.object({
   rentalOrderId: z.string().min(1),

@@ -139,6 +139,7 @@ model Payment {
   amount                Decimal         @db.Decimal(10, 2)
   provider              PaymentProvider @default(STRIPE)
   stripePaymentIntentId String?
+  stripeCheckoutSessionId String? @unique
   status                PaymentStatus   @default(PENDING)
   paidAt                DateTime?
   createdAt             DateTime        @default(now())

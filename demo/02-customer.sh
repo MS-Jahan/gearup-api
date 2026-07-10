@@ -6,21 +6,20 @@ load_state
 
 section "FLOW 2 — Customer"
 
-pause_step
-api_request POST "/api/auth/login" \
-  '{"email":"customer@gearup.com","password":"Customer@123"}'
-CUSTOMER_TOKEN="$(json_field "$LAST_RESPONSE" "['data']['token']")"
-save_state CUSTOMER_TOKEN "$CUSTOMER_TOKEN"
+login_as "CUSTOMER" "customer@gearup.com" "Customer@123" CUSTOMER_TOKEN
 
 pause_step
-api_request GET "/api/auth/me" "" "$CUSTOMER_TOKEN"
+use_token "CUSTOMER" "$CUSTOMER_TOKEN"
+api_request GET "/api/auth/me" "" "$CUSTOMER_TOKEN" "CUSTOMER"
 
 pause_step
-api_request GET "/api/profile" "" "$CUSTOMER_TOKEN"
+use_token "CUSTOMER" "$CUSTOMER_TOKEN"
+api_request GET "/api/profile" "" "$CUSTOMER_TOKEN" "CUSTOMER"
 
 pause_step
+use_token "CUSTOMER" "$CUSTOMER_TOKEN"
 api_request PATCH "/api/profile" \
-  '{"name":"Rahim Khan (Demo)"}' "$CUSTOMER_TOKEN"
+  '{"name":"Rahim Khan (Demo)"}' "$CUSTOMER_TOKEN" "CUSTOMER"
 
 if [[ -z "${GEAR_ID:-}" ]]; then
   api_request GET "/api/gear?limit=1&available=true"
@@ -29,16 +28,19 @@ if [[ -z "${GEAR_ID:-}" ]]; then
 fi
 
 pause_step
+use_token "CUSTOMER" "$CUSTOMER_TOKEN"
 api_request POST "/api/rentals" \
   "{\"items\":[{\"gearItemId\":\"${GEAR_ID}\",\"quantity\":1}],\"startDate\":\"2026-11-01T00:00:00.000Z\",\"endDate\":\"2026-11-04T00:00:00.000Z\"}" \
-  "$CUSTOMER_TOKEN"
+  "$CUSTOMER_TOKEN" "CUSTOMER"
 RENTAL_ID="$(json_field "$LAST_RESPONSE" "['data']['id']")"
 save_state RENTAL_ID "$RENTAL_ID"
 
 pause_step
-api_request GET "/api/rentals" "" "$CUSTOMER_TOKEN"
+use_token "CUSTOMER" "$CUSTOMER_TOKEN"
+api_request GET "/api/rentals" "" "$CUSTOMER_TOKEN" "CUSTOMER"
 
 pause_step
-api_request GET "/api/rentals/${RENTAL_ID}" "" "$CUSTOMER_TOKEN"
+use_token "CUSTOMER" "$CUSTOMER_TOKEN"
+api_request GET "/api/rentals/${RENTAL_ID}" "" "$CUSTOMER_TOKEN" "CUSTOMER"
 
 echo -e "${GREEN}Customer flow complete.${RESET} RENTAL_ID=${RENTAL_ID}"

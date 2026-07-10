@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
 import Stripe from "stripe";
 import { config } from "../../config";
+import { prisma } from "../../config/database";
 import { AppError } from "../../utils/apiResponse";
 import {
   completePaymentByIntentId,
+  completePaymentByCheckoutSession,
   failPaymentByIntentId,
 } from "./payment.service";
 
@@ -43,6 +45,26 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
 
   try {
     switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        if (session.payment_status === "paid") {
+          await completePaymentByCheckoutSession(session);
+        }
+        break;
+      }
+      case "checkout.session.expired": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        if (session.id) {
+          await prisma.payment.updateMany({
+            where: {
+              stripeCheckoutSessionId: session.id,
+              status: "PENDING",
+            },
+            data: { status: "FAILED" },
+          });
+        }
+        break;
+      }
       case "payment_intent.succeeded": {
         const intent = event.data.object as Stripe.PaymentIntent;
         await completePaymentByIntentId(intent.id);

@@ -5,7 +5,10 @@ import { AppError, sendSuccess } from "../../utils/apiResponse";
 import { authenticate, authorize, asyncHandler } from "../../middleware/auth";
 import { confirmPaymentSchema, createPaymentSchema } from "../../middleware/validate";
 import { AuthRequest, getParam } from "../../utils/helpers";
-import { completePaymentByIntentId } from "./payment.service";
+import {
+  completePaymentByCheckoutSession,
+  completePaymentByIntentId,
+} from "./payment.service";
 import Stripe from "stripe";
 
 const router = Router();
@@ -17,6 +20,77 @@ const getStripe = () => {
   return new Stripe(config.stripe.secretKey);
 };
 
+const paymentResultPage = (title: string, message: string) => `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>${title} — GearUp</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 4rem auto; padding: 0 1rem; text-align: center; }
+    h1 { color: #0f766e; }
+    p { color: #475569; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <h1>${title}</h1>
+  <p>${message}</p>
+</body>
+</html>`;
+
+/**
+ * @swagger
+ * /api/payments/success:
+ *   get:
+ *     tags: [Payments]
+ *     summary: Stripe Checkout success redirect page
+ */
+router.get(
+  "/success",
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const sessionId = req.query.session_id as string | undefined;
+    if (sessionId && config.stripe.secretKey) {
+      try {
+        const stripe = getStripe();
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        if (session.payment_status === "paid") {
+          await completePaymentByCheckoutSession(session);
+        }
+      } catch (err) {
+        console.error("Payment success page confirmation error:", err);
+      }
+    }
+    res
+      .type("html")
+      .send(
+        paymentResultPage(
+          "Payment successful",
+          "Your rental payment was received. You can close this tab and return to the app."
+        )
+      );
+  })
+);
+
+/**
+ * @swagger
+ * /api/payments/cancel:
+ *   get:
+ *     tags: [Payments]
+ *     summary: Stripe Checkout cancel redirect page
+ */
+router.get(
+  "/cancel",
+  asyncHandler(async (_req: AuthRequest, res: Response) => {
+    res
+      .type("html")
+      .send(
+        paymentResultPage(
+          "Payment cancelled",
+          "No charge was made. You can try again from the rental order."
+        )
+      );
+  })
+);
+
 router.use(authenticate, authorize("CUSTOMER"));
 
 /**
@@ -24,11 +98,10 @@ router.use(authenticate, authorize("CUSTOMER"));
  * /api/payments/create:
  *   post:
  *     tags: [Payments]
- *     summary: Create Stripe payment intent for rental order
+ *     summary: Create Stripe Checkout session for rental order
  *     description: |
- *       Returns a clientSecret for Stripe.js. When the customer pays, Stripe sends
- *       `payment_intent.succeeded` to `/api/payments/webhook` and the order is marked PAID
- *       automatically. `/api/payments/confirm` remains available as a manual fallback.
+ *       Returns a hosted Stripe Checkout `url` — open it in a browser to pay.
+ *       After payment, Stripe calls `/api/payments/webhook` and the order is marked PAID.
  */
 router.post(
   "/create",
@@ -37,6 +110,9 @@ router.post(
 
     const order = await prisma.rentalOrder.findFirst({
       where: { id: rentalOrderId, customerId: req.user!.userId },
+      include: {
+        items: { include: { gearItem: { select: { name: true } } } },
+      },
     });
 
     if (!order) {
@@ -56,17 +132,54 @@ router.post(
 
     const stripe = getStripe();
     const amountCents = Math.round(Number(order.totalAmount) * 100);
+    const gearNames = order.items.map((i) => i.gearItem.name).join(", ");
+    const baseUrl = config.appUrl.replace(/\/$/, "");
 
-    const intent = await stripe.paymentIntents.create({
-      amount: amountCents,
-      currency: "usd",
+    if (existing?.stripeCheckoutSessionId) {
+      const oldSession = await stripe.checkout.sessions.retrieve(
+        existing.stripeCheckoutSessionId
+      );
+      if (oldSession.status === "open" && oldSession.url) {
+        sendSuccess(
+          res,
+          {
+            payment: existing,
+            url: oldSession.url,
+            sessionId: oldSession.id,
+          },
+          "Checkout session ready"
+        );
+        return;
+      }
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
       payment_method_types: ["card"],
-      automatic_payment_methods: { enabled: false },
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: "GearUp rental order",
+              description: gearNames || `Order ${order.id}`,
+            },
+            unit_amount: amountCents,
+          },
+          quantity: 1,
+        },
+      ],
       metadata: {
         rentalOrderId: order.id,
         customerId: req.user!.userId,
       },
+      success_url: `${baseUrl}/api/payments/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/api/payments/cancel?rental_order_id=${order.id}`,
     });
+
+    if (!session.url) {
+      throw new AppError("Failed to create Stripe Checkout URL", 500);
+    }
 
     const payment = await prisma.payment.upsert({
       where: { rentalOrderId },
@@ -75,19 +188,27 @@ router.post(
         customerId: req.user!.userId,
         amount: order.totalAmount,
         provider: "STRIPE",
-        stripePaymentIntentId: intent.id,
+        stripeCheckoutSessionId: session.id,
         status: "PENDING",
       },
       update: {
-        stripePaymentIntentId: intent.id,
+        stripeCheckoutSessionId: session.id,
+        stripePaymentIntentId: null,
         status: "PENDING",
+        paidAt: null,
       },
     });
 
-    sendSuccess(res, {
-      payment,
-      clientSecret: intent.client_secret,
-    }, "Payment intent created", 201);
+    sendSuccess(
+      res,
+      {
+        payment,
+        url: session.url,
+        sessionId: session.id,
+      },
+      "Checkout session created",
+      201
+    );
   })
 );
 
@@ -96,19 +217,31 @@ router.post(
  * /api/payments/confirm:
  *   post:
  *     tags: [Payments]
- *     summary: Confirm payment after Stripe succeeds (optional fallback)
- *     description: |
- *       Prefer the Stripe webhook at `/api/payments/webhook` for automatic confirmation.
- *       Use this endpoint only when webhooks are unavailable (e.g. local Swagger testing).
+ *     summary: Confirm payment manually (fallback if webhook is delayed)
  */
 router.post(
   "/confirm",
   asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { paymentIntentId } = confirmPaymentSchema.parse(req.body);
-
+    const data = confirmPaymentSchema.parse(req.body);
     const stripe = getStripe();
+
+    if (data.sessionId) {
+      const session = await stripe.checkout.sessions.retrieve(data.sessionId);
+      const { payment, alreadyCompleted } =
+        await completePaymentByCheckoutSession(session, {
+          customerId: req.user!.userId,
+          verifyWithStripe: stripe,
+        });
+      sendSuccess(
+        res,
+        payment,
+        alreadyCompleted ? "Payment already confirmed" : "Payment confirmed"
+      );
+      return;
+    }
+
     const { payment, alreadyCompleted } = await completePaymentByIntentId(
-      paymentIntentId,
+      data.paymentIntentId!,
       {
         customerId: req.user!.userId,
         verifyWithStripe: stripe,

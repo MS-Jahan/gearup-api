@@ -53,14 +53,15 @@ Swagger docs at `http://localhost:5000/api/docs`
 
 Use test mode keys from [Stripe Dashboard](https://dashboard.stripe.com/test/apikeys).
 
-Test card: `4242 4242 4242 4242` (any future expiry, any CVC) — collect via **Stripe.js** on a frontend, not by posting the number to this API.
+Test card: `4242 4242 4242 4242` (any future expiry, any CVC)
 
-### Payment flow
+### Payment flow (Stripe Checkout)
 
-1. Customer calls `POST /api/payments/create` → receives `clientSecret`
-2. Frontend confirms payment with Stripe.js (`stripe.confirmCardPayment`)
-3. Stripe calls `POST /api/payments/webhook` → order becomes **PAID** automatically
-4. Optional fallback: `POST /api/payments/confirm` (manual / Swagger testing)
+1. Customer calls `POST /api/payments/create` → receives **`url`** (hosted Stripe Checkout page)
+2. Open the URL in a browser and pay with the test card
+3. Stripe redirects to `/api/payments/success` and sends `checkout.session.completed` to the webhook
+4. Webhook marks the order **PAID** automatically
+5. Optional fallback: `POST /api/payments/confirm` with `{ "sessionId": "cs_..." }`
 
 ### Webhook setup
 
@@ -68,9 +69,10 @@ Test card: `4242 4242 4242 4242` (any future expiry, any CVC) — collect via **
 
 1. [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/test/webhooks) → **Add endpoint**
 2. URL: `https://gearup-api.vercel.app/api/payments/webhook`
-3. Events: `payment_intent.succeeded`, `payment_intent.payment_failed`
+3. Events: `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`
 4. Copy the **Signing secret** (`whsec_...`) into Vercel env var `STRIPE_WEBHOOK_SECRET`
-5. Redeploy
+5. Set `APP_URL=https://gearup-api.vercel.app` in Vercel env vars
+6. Redeploy
 
 **Local development**
 
@@ -98,6 +100,7 @@ Set these env vars in Vercel:
 | `JWT_SECRET` | Random secret string |
 | `STRIPE_SECRET_KEY` | Stripe test/live secret key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret (`whsec_...`) |
+| `APP_URL` | Public API base URL for Stripe redirect URLs |
 
 Run migrations locally against Neon direct URL:
 

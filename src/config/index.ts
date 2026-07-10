@@ -13,6 +13,7 @@ export const config = {
     secretKey: process.env.STRIPE_SECRET_KEY || "",
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
   },
+  appUrl: process.env.APP_URL || "https://gearup-api.vercel.app",
   admin: {
     email: process.env.ADMIN_EMAIL || "admin@gearup.com",
     password: process.env.ADMIN_PASSWORD || "Admin@12345",

@@ -16,26 +16,31 @@ ORDER_STATUS="$(curl -s "${BASE_URL}/api/rentals/${RENTAL_ID}" \
 
 if [[ "$ORDER_STATUS" != "PAID" && "$ORDER_STATUS" != "PICKED_UP" && "$ORDER_STATUS" != "RETURNED" ]]; then
   echo -e "${YELLOW}Order is ${ORDER_STATUS}. Complete Stripe payment first (04-stripe-payment.sh).${RESET}"
-  echo "Continuing anyway — status update may fail if not PAID."
 fi
 
-pause_step
-api_request PATCH "/api/provider/orders/${RENTAL_ID}" \
-  '{"status":"PICKED_UP"}' "$PROVIDER_TOKEN"
+role_banner "PROVIDER"
+use_token "PROVIDER" "$PROVIDER_TOKEN"
 
 pause_step
 api_request PATCH "/api/provider/orders/${RENTAL_ID}" \
-  '{"status":"RETURNED"}' "$PROVIDER_TOKEN"
+  '{"status":"PICKED_UP"}' "$PROVIDER_TOKEN" "PROVIDER"
+
+pause_step
+api_request PATCH "/api/provider/orders/${RENTAL_ID}" \
+  '{"status":"RETURNED"}' "$PROVIDER_TOKEN" "PROVIDER"
 
 if [[ -z "${GEAR_ID:-}" ]]; then
   GEAR_ID="$(json_field "$LAST_RESPONSE" "['data']['items'][0]['gearItemId']")"
   save_state GEAR_ID "$GEAR_ID"
 fi
 
+role_banner "CUSTOMER"
+use_token "CUSTOMER" "$CUSTOMER_TOKEN"
+
 pause_step
 api_request POST "/api/reviews" \
   "{\"rentalOrderId\":\"${RENTAL_ID}\",\"gearItemId\":\"${GEAR_ID}\",\"rating\":5,\"comment\":\"Great gear for the demo video!\"}" \
-  "$CUSTOMER_TOKEN"
+  "$CUSTOMER_TOKEN" "CUSTOMER"
 
 pause_step
 api_request GET "/api/reviews/gear/${GEAR_ID}"

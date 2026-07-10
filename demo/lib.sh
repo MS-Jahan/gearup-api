@@ -3,6 +3,7 @@
 
 BASE_URL="${BASE_URL:-https://gearup-api.vercel.app}"
 DEMO_STATE_FILE="${DEMO_STATE_FILE:-$(dirname "$0")/.demo-state.env}"
+CURRENT_ROLE="${CURRENT_ROLE:-}"
 
 # Colors (disabled if not a tty)
 if [[ -t 1 ]]; then
@@ -13,9 +14,10 @@ if [[ -t 1 ]]; then
   YELLOW='\033[1;33m'
   BLUE='\033[0;34m'
   MAGENTA='\033[0;35m'
+  RED='\033[0;31m'
   RESET='\033[0m'
 else
-  BOLD='' DIM='' CYAN='' GREEN='' YELLOW='' BLUE='' MAGENTA='' RESET=''
+  BOLD='' DIM='' CYAN='' GREEN='' YELLOW='' BLUE='' MAGENTA='' RED='' RESET=''
 fi
 
 pause_step() {
@@ -43,6 +45,61 @@ step_title() {
   echo ""
 }
 
+role_banner() {
+  local role="$1"
+  CURRENT_ROLE="$role"
+  echo ""
+  echo -e "${BLUE}╔══════════════════════════════════════════════════════════╗${RESET}"
+  echo -e "${BLUE}║${RESET}  ${BOLD}Active role: ${role}${RESET}"
+  echo -e "${BLUE}╚══════════════════════════════════════════════════════════╝${RESET}"
+  echo ""
+}
+
+use_token() {
+  local role="$1"
+  local token="$2"
+  CURRENT_ROLE="$role"
+  echo -e "${BOLD}Using ${role} token for the next request(s):${RESET}"
+  echo -e "${GREEN}${token}${RESET}"
+  echo ""
+}
+
+login_as() {
+  local role="$1"
+  local email="$2"
+  local password="$3"
+  local token_var="$4"
+
+  role_banner "$role"
+  echo -e "${BOLD}Trying to log in:${RESET}"
+  echo -e "  ${DIM}Email:${RESET}    ${email}"
+  echo -e "  ${DIM}Password:${RESET} ${password}"
+  echo ""
+
+  pause_step
+  api_request POST "/api/auth/login" \
+    "{\"email\":\"${email}\",\"password\":\"${password}\"}"
+
+  local token
+  token="$(json_field "$LAST_RESPONSE" "['data']['token']")"
+  local name
+  name="$(json_field "$LAST_RESPONSE" "['data']['user']['name']")"
+
+  if [[ -z "$token" || "$token" == "None" ]]; then
+    echo -e "${RED}✗ Login failed — no token received${RESET}"
+    return 1
+  fi
+
+  echo -e "${GREEN}✓ Login successful as ${role} (${name})${RESET}"
+  echo -e "${BOLD}Got token:${RESET}"
+  echo -e "${GREEN}${token}${RESET}"
+  echo ""
+
+  save_state "$token_var" "$token"
+  save_state "CURRENT_ROLE" "$role"
+  printf -v "$token_var" '%s' "$token"
+}
+
 pretty_json() {
   if command -v python3 >/dev/null 2>&1; then
     python3 -m json.tool 2>/dev/null || cat
@@ -54,7 +111,6 @@ pretty_json() {
 }
 
 save_state() {
-  # usage: save_state KEY value
   local key="$1"
   local val="$2"
   touch "$DEMO_STATE_FILE"
@@ -66,20 +122,22 @@ save_state() {
 }
 
 load_state() {
-  # usage: load_state KEY  OR  source demo state
   if [[ -f "$DEMO_STATE_FILE" ]]; then
     # shellcheck disable=SC1090
     source "$DEMO_STATE_FILE"
+    if [[ -n "${CURRENT_ROLE:-}" ]]; then
+      echo -e "${DIM}Loaded state — last role: ${CURRENT_ROLE}${RESET}"
+    fi
   fi
 }
 
-# api_request METHOD PATH [JSON_BODY] [AUTH_TOKEN]
-# Sets LAST_RESPONSE and LAST_HTTP_CODE
+# api_request METHOD PATH [JSON_BODY] [AUTH_TOKEN] [ROLE_LABEL]
 api_request() {
   local method="$1"
   local path="$2"
   local body="${3:-}"
   local token="${4:-}"
+  local role_label="${5:-${CURRENT_ROLE:-}}"
 
   local url="${BASE_URL}${path}"
   local curl_args=(-sS -w "\n%{http_code}" -X "$method" "$url" -H "Content-Type: application/json")
@@ -92,7 +150,22 @@ api_request() {
     curl_args+=(-d "$body")
   fi
 
-  step_title "${method} ${path}"
+  local auth_note="(no auth)"
+  if [[ -n "$token" ]]; then
+    if [[ -n "$role_label" ]]; then
+      auth_note="(authenticated as ${role_label})"
+    else
+      auth_note="(authenticated)"
+    fi
+  fi
+
+  step_title "${method} ${path} ${auth_note}"
+
+  if [[ -n "$token" && -n "$role_label" ]]; then
+    echo -e "${DIM}Auth:${RESET} Bearer token for ${BOLD}${role_label}${RESET}"
+    echo -e "${DIM}Token:${RESET} ${token}"
+    echo ""
+  fi
 
   echo -e "${DIM}Request URL:${RESET} ${url}"
   if [[ -n "$body" ]]; then
@@ -105,8 +178,8 @@ api_request() {
 
   echo -e "${DIM}curl command:${RESET}"
   local curl_show="curl -X ${method} '${url}' -H 'Content-Type: application/json'"
-  [[ -n "$token" ]] && curl_show+=" -H 'Authorization: Bearer <token>'"
-  [[ -n "$body" ]] && curl_show+=" -d '...'"
+  [[ -n "$token" ]] && curl_show+=" -H 'Authorization: Bearer ${token}'"
+  [[ -n "$body" ]] && curl_show+=" -d '$(echo "$body" | tr -d '\n')'"
   echo "$curl_show"
   echo ""
 

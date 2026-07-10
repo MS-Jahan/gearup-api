@@ -124,13 +124,29 @@
         "summary": "Update current user profile"
       }
     },
+    "/api/payments/success": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Stripe Checkout success redirect page"
+      }
+    },
+    "/api/payments/cancel": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Stripe Checkout cancel redirect page"
+      }
+    },
     "/api/payments/create": {
       "post": {
         "tags": [
           "Payments"
         ],
-        "summary": "Create Stripe payment intent for rental order",
-        "description": "Returns a clientSecret for Stripe.js. When the customer pays, Stripe sends\n`payment_intent.succeeded` to `/api/payments/webhook` and the order is marked PAID\nautomatically. `/api/payments/confirm` remains available as a manual fallback.\n"
+        "summary": "Create Stripe Checkout session for rental order",
+        "description": "Returns a hosted Stripe Checkout `url` — open it in a browser to pay.\nAfter payment, Stripe calls `/api/payments/webhook` and the order is marked PAID.\n"
       }
     },
     "/api/payments/confirm": {
@@ -138,8 +154,7 @@
         "tags": [
           "Payments"
         ],
-        "summary": "Confirm payment after Stripe succeeds (optional fallback)",
-        "description": "Prefer the Stripe webhook at `/api/payments/webhook` for automatic confirmation.\nUse this endpoint only when webhooks are unavailable (e.g. local Swagger testing).\n"
+        "summary": "Confirm payment manually (fallback if webhook is delayed)"
       }
     },
     "/api/payments": {
