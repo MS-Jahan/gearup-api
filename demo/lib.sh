@@ -102,9 +102,22 @@ login_as() {
 
 strip_demo_dates() {
   python3 -c "
-import json, sys
+import json, os, sys
 
-DATE_KEYS = {'createdAt', 'updatedAt', 'paidAt'}
+KNOWN_DATETIME_KEYS = {
+    'createdat', 'updatedat', 'paidat', 'startdate', 'enddate',
+    'created_at', 'updated_at', 'paid_at', 'start_date', 'end_date',
+}
+
+def is_datetime_key(key):
+    if not isinstance(key, str) or not key:
+        return False
+    if key.endswith('At') or key.endswith('Date'):
+        return True
+    if key.lower() in KNOWN_DATETIME_KEYS:
+        return True
+    normalized = key.replace('_', '').lower()
+    return normalized in KNOWN_DATETIME_KEYS
 
 def strip(value):
     if isinstance(value, list):
@@ -113,7 +126,7 @@ def strip(value):
         return {
             key: strip(val)
             for key, val in value.items()
-            if key not in DATE_KEYS
+            if not is_datetime_key(key)
         }
     return value
 
@@ -121,7 +134,12 @@ raw = sys.stdin.read()
 if not raw.strip():
     sys.exit(0)
 try:
-    print(json.dumps(strip(json.loads(raw)), indent=2))
+    payload = strip(json.loads(raw))
+    compact = os.environ.get('DEMO_JSON_COMPACT') == '1'
+    if compact:
+        print(json.dumps(payload, separators=(',', ':')))
+    else:
+        print(json.dumps(payload, indent=2))
 except json.JSONDecodeError:
     sys.stdout.write(raw)
 " 2>/dev/null || cat
@@ -129,6 +147,10 @@ except json.JSONDecodeError:
 
 pretty_json() {
   strip_demo_dates
+}
+
+compact_demo_json() {
+  DEMO_JSON_COMPACT=1 strip_demo_dates
 }
 
 save_state() {
@@ -200,7 +222,11 @@ api_request() {
   echo -e "${DIM}curl command:${RESET}"
   local curl_show="curl -X ${method} '${url}' -H 'Content-Type: application/json'"
   [[ -n "$token" ]] && curl_show+=" -H 'Authorization: Bearer ${token}'"
-  [[ -n "$body" ]] && curl_show+=" -d '$(echo "$body" | tr -d '\n')'"
+  if [[ -n "$body" ]]; then
+    local body_for_curl
+    body_for_curl="$(echo "$body" | compact_demo_json | tr -d '\n')"
+    curl_show+=" -d '${body_for_curl}'"
+  fi
   echo "$curl_show"
   echo ""
 
