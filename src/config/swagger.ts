@@ -22,5 +22,14 @@ const getServerUrl = (req?: Request): string => {
 
 export const getSwaggerSpec = (req?: Request) => ({
   ...baseSpec,
+  info: {
+    ...baseSpec.info,
+    description:
+      "Sports and outdoor gear rental service backend API.\n\n" +
+      "**Authorize (Bearer JWT):**\n" +
+      "1. Call `POST /api/auth/login` (e.g. admin@gearup.com / Admin@12345).\n" +
+      "2. Copy `data.token` from the response.\n" +
+      "3. Click **Authorize** (top right) and paste the token only (no `Bearer ` prefix).",
+  },
   servers: [{ url: getServerUrl(req), description: "API server" }],
 });

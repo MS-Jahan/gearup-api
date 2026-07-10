@@ -74,8 +74,12 @@ export const updateUserStatusSchema = z.object({
 export const gearQuerySchema = z.object({
   category: z.string().optional(),
   brand: z.string().optional(),
-  minPrice: z.coerce.number().optional(),
-  maxPrice: z.coerce.number().optional(),
+  minPrice: z.coerce
+    .number({ message: "minPrice must be a valid number" })
+    .optional(),
+  maxPrice: z.coerce
+    .number({ message: "maxPrice must be a valid number" })
+    .optional(),
   available: z
     .enum(["true", "false"])
     .optional()
