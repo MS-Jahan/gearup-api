@@ -1,6 +1,5 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
-import swaggerUi from "swagger-ui-express";
 import { getSwaggerSpec } from "./config/swagger";
 import { errorHandler, notFoundHandler } from "./utils/apiResponse";
 
@@ -36,11 +35,36 @@ app.get("/", (_req, res) => {
   });
 });
 
-const swaggerSetup = swaggerUi.setup(getSwaggerSpec());
+const renderSwaggerPage = (specUrl: string) => `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GearUp API Docs</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    window.ui = SwaggerUIBundle({
+      url: "${specUrl}",
+      dom_id: "#swagger-ui",
+      presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+      layout: "BaseLayout",
+    });
+  </script>
+</body>
+</html>`;
 
-app.use("/api/docs", swaggerUi.serve, swaggerSetup);
-app.get("/api/docs.json", (_req, res) => {
-  res.json(getSwaggerSpec());
+app.get(["/api/docs", "/api/docs/"], (req: Request, res: Response) => {
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  const specUrl = `${proto}://${host}/api/docs.json`;
+  res.type("html").send(renderSwaggerPage(specUrl));
+});
+
+app.get("/api/docs.json", (req: Request, res: Response) => {
+  res.json(getSwaggerSpec(req));
 });
 
 app.use("/api/auth", authRoutes);
