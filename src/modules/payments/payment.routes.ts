@@ -55,6 +55,7 @@ router.post(
     const intent = await stripe.paymentIntents.create({
       amount: amountCents,
       currency: "usd",
+      payment_method_types: ["card"],
       metadata: {
         rentalOrderId: order.id,
         customerId: req.user!.userId,
