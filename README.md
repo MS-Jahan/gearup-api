@@ -114,6 +114,16 @@ npm run db:seed
 
 `postinstall` runs `prisma generate` and regenerates `swagger.json` on every deploy.
 
+## Demo video timestamps
+
+Before recording, backdate existing DB rows so data looks created **Jul 8–10, 2026**:
+
+```bash
+DIRECT_URL="postgresql://...@ep-xxx.neon.tech/neondb?sslmode=require" bash demo/backdate-db.sh
+```
+
+The demo scripts also hide `createdAt`, `updatedAt`, and `paidAt` in **terminal output only** (the live API is unchanged).
+
 ## Environment Variables
 
 See `.env.example` for all required variables.

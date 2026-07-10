@@ -100,14 +100,35 @@ login_as() {
   printf -v "$token_var" '%s' "$token"
 }
 
+strip_demo_dates() {
+  python3 -c "
+import json, sys
+
+DATE_KEYS = {'createdAt', 'updatedAt', 'paidAt'}
+
+def strip(value):
+    if isinstance(value, list):
+        return [strip(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: strip(val)
+            for key, val in value.items()
+            if key not in DATE_KEYS
+        }
+    return value
+
+raw = sys.stdin.read()
+if not raw.strip():
+    sys.exit(0)
+try:
+    print(json.dumps(strip(json.loads(raw)), indent=2))
+except json.JSONDecodeError:
+    sys.stdout.write(raw)
+" 2>/dev/null || cat
+}
+
 pretty_json() {
-  if command -v python3 >/dev/null 2>&1; then
-    python3 -m json.tool 2>/dev/null || cat
-  elif command -v jq >/dev/null 2>&1; then
-    jq . 2>/dev/null || cat
-  else
-    cat
-  fi
+  strip_demo_dates
 }
 
 save_state() {
